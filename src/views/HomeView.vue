@@ -24,6 +24,8 @@ import qazaqstan from '@/assets/flags/qazaqstan.svg'
 import world from '@/assets/flags/world.svg'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import EventComponent from '@/components/EventComponent.vue'
+
 const { t } = useI18n()
 const auth = useAuth()
 const api = useAPI()
@@ -297,6 +299,18 @@ const statistics = computed(() => {
   return []
 })
 
+const organizationTypes: Ref<any[]> = ref([])
+const selectedOrganizationType: Ref<number | null> = ref(null)
+
+const getOrganizationTypes = async () => {
+  const response = await api.fetchData<{ data: { items: any[] } }>('/v1/organization')
+  if (response.data) {
+    organizationTypes.value = response.data.data.items
+  }
+}
+
+getOrganizationTypes();
+
 async function downloadPDF(id: any) {
   const response = await api.postData(
     `/v1/book/school/book-state/pdf?book_state_id=${id}`,
@@ -549,13 +563,17 @@ const bookSchools = ref({
 async function getRegionDetails() {
   regionDetailsLoaded.value = false
   try {
-    let url = '/v1/dashboard/ministry/details'
+    let url = '/v1/dashboard/ministry/details?1=1'
     if (selectedThirdRegion.value) {
-      url += `?region_id=${selectedThirdRegion.value.id}`
+      url += `&region_id=${selectedThirdRegion.value.id}`
     } else if (selectedChildRegion.value) {
-      url += `?region_id=${selectedChildRegion.value.id}`
-    } else {
-      url += `?region_id=${selectedRegion.value.id}`
+      url += `&region_id=${selectedChildRegion.value.id}`
+    } else if (selectedRegion.value) {
+      url += `&region_id=${selectedRegion.value.id}`
+    }
+
+    if (selectedOrganizationType.value) {
+      url += `&organization_type=${selectedOrganizationType.value}`
     }
 
     const response =
@@ -660,6 +678,9 @@ const getSchools = async (search: string | null = null, name: string | null = nu
     if (selectedThirdRegion.value) request += `&region_id=${selectedThirdRegion.value.id}`
     else if (selectedChildRegion.value) request += `&region_id=${selectedChildRegion.value.id}`
     else if (selectedRegion.value) request += `&region_id=${selectedRegion.value.id}`
+
+    if (selectedOrganizationType.value) request += `&organization_id=${selectedOrganizationType.value}`
+
     const response = await api.fetchData<{ data: { items: any[] }; meta: { last_page: number } }>(
       request
     )
@@ -884,6 +905,13 @@ watch(selectedThirdRegion, () => {
   getSchools()
   getRegionDetails()
 })
+
+watch(selectedOrganizationType, () => {
+  getRegions()
+  getSchools()
+  getRegionDetails()
+})
+
 
 if (role.value === 3) {
   getDashboard()
@@ -1199,6 +1227,16 @@ getInventory()
                 return-object
                 variant="outlined"
               ></v-select>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+
+      <v-card v-if="role === 8 || role === 1" class="my-4">
+        <v-card-text>
+          <v-row>
+            <v-col>
+              <v-select v-model="selectedOrganizationType" item-title="label" item-value="id" label="Выберите тип организации" :items="organizationTypes" hide-details variant="outlined"></v-select>
             </v-col>
           </v-row>
         </v-card-text>
@@ -2481,6 +2519,12 @@ getInventory()
             size="small"
             variant="flat"
           ></v-pagination>
+        </v-col>
+      </v-row>
+
+      <v-row v-if="role === 3">
+        <v-col>
+          <event-component />
         </v-col>
       </v-row>
     </v-container>

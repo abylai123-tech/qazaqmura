@@ -174,6 +174,7 @@ const requestAmount = ref(0)
 const quarter = ref(null)
 const userRelative: Ref<{ id: number; title: string }[]> = ref([])
 const roles: Ref<{ id: number; title: string }[]> = ref([])
+const isCollege = ref(false)
 
 async function getRelatives() {
   try {
@@ -626,6 +627,7 @@ getBookStates()
           label="Добавить контактное лицо"
         ></v-switch>
         <v-switch v-model="addStructure" color="primary" :label="t('structure')"></v-switch>
+        <v-switch v-model="isCollege" color="primary" label="Колледж"></v-switch>
       </v-list-item>
 
       <v-list-item v-if="addContactPerson">
@@ -648,8 +650,8 @@ getBookStates()
       <v-list-item v-if="addStructure">
         <div class="font-weight-bold">{{t('structure')}}</div>
         <div class="d-flex">
-          <v-text-field label="Цифра класса" variant="outlined"></v-text-field>
-          <v-text-field class="ml-4" label="Буква класса" variant="outlined"></v-text-field>
+          <v-text-field :label="isCollege ? 'Курс' : 'Цифра класса'" variant="outlined"></v-text-field>
+          <v-text-field class="ml-4" :label="isCollege ? 'Кафедра' : 'Буква класса'" variant="outlined"></v-text-field>
         </div>
       </v-list-item>
 

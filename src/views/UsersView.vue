@@ -143,6 +143,8 @@ const drawer: Ref<boolean> = ref(false)
 const importFile: Ref<File[] | undefined> = ref(undefined)
 const createDrawer: Ref<boolean> = ref(false)
 const addContactPerson: Ref<boolean> = ref(false)
+const specialties = ref([])
+const isCollege: Ref<boolean> = ref(false)
 const addStructure: Ref<boolean> = ref(false)
 const userRelative: Ref<{ id: number; title: string }[]> = ref([])
 const roles: Ref<{ id: number; title: string }[]> = ref([])
@@ -152,6 +154,17 @@ async function getRelatives() {
     const response = await api.fetchData('/v1/user/relative')
     if (response.data) {
       userRelative.value = response.data.data.items
+    }
+  } catch (e) {
+    console.error('Error:', e)
+  }
+}
+
+async function getSpecialties() {
+  try {
+    const response = await api.fetchData('/v1/specialty')
+    if (response.data) {
+      specialties.value = response.data.data.items
     }
   } catch (e) {
     console.error('Error:', e)
@@ -281,6 +294,7 @@ const getLettersAndNumbers = async () => {
 getUsers()
 getRelatives()
 getRoles()
+getSpecialties()
 getSubscriptionBlock()
 getLettersAndNumbers()
 
@@ -320,7 +334,7 @@ const createUser = async () => {
     if (organization.value) request['school_id'] = organization.value.id
 
     const response = await api.postData('/v1/user', request)
-    if (response.data && addStructure.value) {
+    if (response.data && addStructure.value && !isCollege.value) {
       classroom.value.pupil_id = response.data.id
       classroom.value.user_id = auth.user.value.id
 
@@ -712,6 +726,12 @@ getOrganizations()
           color="primary"
           :label="t('structure')"
         ></v-switch>
+        <v-switch
+          v-model="isCollege"
+          class="ml-2"
+          color="primary"
+          label="Колледж"
+        ></v-switch>
       </v-list-item>
 
       <v-list-item v-if="addContactPerson">
@@ -747,7 +767,7 @@ getOrganizations()
 
       <v-list-item v-if="addStructure">
         <div class="font-weight-bold">{{ t('structure') }}</div>
-        <div class="d-flex">
+        <div v-if="!isCollege" class="d-flex">
           <v-select
             v-model="classroom.number"
             :items="numbers"
@@ -762,6 +782,24 @@ getOrganizations()
             class="ml-4 mt-2"
             clearable
             label="Буква класса"
+            variant="outlined"
+          ></v-select>
+        </div>
+        <div v-else class="d-flex">
+          <v-select
+            class="mt-2"
+            clearable
+            :items="[1, 2, 3, 4]"
+            label="Курс"
+            variant="outlined"
+          ></v-select>
+          <v-select
+            :items="specialties"
+            item-value="id"
+            item-title="title"
+            class="ml-4 mt-2"
+            clearable
+            label="Специальность"
             variant="outlined"
           ></v-select>
         </div>
