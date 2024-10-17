@@ -51,6 +51,28 @@ export default {
       } catch (e) {
         console.error(e)
       }
+    },
+    async downloadJournal() {
+      try {
+        const api = useAPI()
+        const auth = useAuth()
+        const response = await api.fetchFile(
+          `/v1/event/journal?school_id=${auth.userData.value.school.id}`
+        )
+        const blob = new Blob([response.data], { type: 'application/pdf' })
+        const url = window.URL.createObjectURL(blob)
+
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'downloaded-file.pdf'
+        document.body.appendChild(a)
+        a.click()
+
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } catch (e) {
+        console.error(e)
+      }
     }
   }
 }
@@ -138,5 +160,8 @@ export default {
         <v-tabs-window-item :value="1"></v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
+    <v-card-actions>
+      <v-btn color="primary" @click="downloadJournal">Скачать журнал мероприятий</v-btn>
+    </v-card-actions>
   </v-card>
 </template>
