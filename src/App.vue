@@ -13,7 +13,6 @@ const route = useRoute()
 const auth = useAuth()
 const router = useRouter()
 
-
 const navigation = computed(() => [
   {
     title: t('dashboard'),
@@ -45,6 +44,14 @@ const navigation = computed(() => [
       prependIcon: 'mdi-library',
       appendIcon: 'mdi-chevron-right',
       to: { name: 'quotes' }
+    }
+  },
+  {
+    title: 'Онлайн библиотека',
+    props: {
+      prependIcon: 'mdi-library',
+      appendIcon: 'mdi-chevron-right',
+      to: { name: 'online-library' }
     }
   },
   {
@@ -183,7 +190,7 @@ const navigationActive = computed(() => {
     case 'entity':
       return 14
     case 'quotes':
-      return 20 
+      return 20
     default:
       return 0
   }
@@ -385,9 +392,19 @@ const guideItems = [
           </v-list>
         </v-menu>
 
-        <v-btn @click="switchLocale('kk')" variant="text" :color="locale === 'kk' ? 'black': 'grey'">Каз</v-btn>
+        <v-btn
+          @click="switchLocale('kk')"
+          variant="text"
+          :color="locale === 'kk' ? 'black' : 'grey'"
+          >Каз</v-btn
+        >
         <v-divider vertical inset></v-divider>
-        <v-btn @click="switchLocale('ru')" variant="text" :color="locale === 'ru' ? 'black': 'grey'">Рус</v-btn>
+        <v-btn
+          @click="switchLocale('ru')"
+          variant="text"
+          :color="locale === 'ru' ? 'black' : 'grey'"
+          >Рус</v-btn
+        >
       </template>
     </v-app-bar>
 
