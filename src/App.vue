@@ -519,6 +519,8 @@ const guideItems = [
           <v-list-item :to="{ name: 'bookType' }" :title="t('type')"></v-list-item>
           <v-list-item :to="{ name: 'tag' }" title="Ключевые слова"></v-list-item>
           <v-list-item :to="{ name: 'material' }" title="Обозначение материала"></v-list-item>
+          <v-list-item :to="{ name: 'discipline' }" title="Дисциплина"></v-list-item>
+          <v-list-item :to="{ name: 'qualification' }" title="Квалификация"></v-list-item>
         </v-list-group>
         <v-list-item
           :value="27"

@@ -1,7 +1,6 @@
 <script lang="ts" setup>
 import { useAPI } from '@/api'
 import { ref, watch, type Ref } from 'vue'
-import HelpButton from '@/components/HelpButton.vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 interface Item {

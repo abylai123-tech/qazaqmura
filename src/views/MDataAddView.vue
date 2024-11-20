@@ -45,6 +45,10 @@ interface Form {
   materials: number[] | null
   link: { URL: string; title: string }
   subject_heading_id: number | null
+  discipline_id: number | null
+  qualification_id: number | null
+  profession_id: number | null
+  specialty_id: number | null
 }
 
 const hasClass = ref(false)
@@ -92,6 +96,10 @@ const types: Ref<Publisher[]> = ref([])
 const languages: Ref<Publisher[]> = ref([])
 const additionalAuthors: Ref<boolean> = ref(false)
 const contractors: Ref<Contractor[]> = ref([])
+const qualifications: Ref<any[]> = ref([])
+const specialties: Ref<any[]> = ref([])
+const professions: Ref<any[]> = ref([])
+const disciplines: Ref<any[]> = ref([])
 const states: Ref<Publisher[]> = ref([])
 const admissions: Ref<Publisher[]> = ref([])
 const materials: Ref<Material[]> = ref([])
@@ -278,6 +286,58 @@ async function getContractors(search = null) {
     }
     const response = await api.fetchData<{ data: { items: Contractor[] } }>(request)
     if (response.data) contractors.value = response.data.data.items
+  } catch (error: any) {
+    console.error('Error:', error.message)
+  }
+}
+
+async function getProfessions(search = null) {
+  try {
+    let request = `/v1/profession`
+    if (search) {
+      request += `?search=${search}`
+    }
+    const response = await api.fetchData<{ data: { items: Contractor[] } }>(request)
+    if (response.data) professions.value = response.data.data.items
+  } catch (error: any) {
+    console.error('Error:', error.message)
+  }
+}
+
+async function getSpecialties(search = null) {
+  try {
+    let request = `/v1/specialty`
+    if (search) {
+      request += `?search=${search}`
+    }
+    const response = await api.fetchData<{ data: { items: Contractor[] } }>(request)
+    if (response.data) specialties.value = response.data.data.items
+  } catch (error: any) {
+    console.error('Error:', error.message)
+  }
+}
+
+async function getDisciplines(search = null) {
+  try {
+    let request = '/v1/discipline'
+    if (search) {
+      request += `?search=${search}`
+    }
+    const response = await api.fetchData<{ data: { items: any[] } }>(request)
+    if (response.data) disciplines.value = response.data.data.items
+  } catch (error: any) {
+    console.error('Error:', error.message)
+  }
+}
+
+async function getQualifications(search = null) {
+  try {
+    let request = '/v1/qualification'
+    if (search) {
+      request += `?search=${search}`
+    }
+    const response = await api.fetchData<{ data: { items: any[] } }>(request)
+    if (response.data) qualifications.value = response.data.data.items
   } catch (error: any) {
     console.error('Error:', error.message)
   }
@@ -475,7 +535,6 @@ function removeNullOrEmptyFields(obj: any): any {
   return newObj
 }
 
-
 function setNewItem(
   itemType: 'author' | 'publisher' | 'genre' | 'subjectHeading' | 'contractor' | 'tag'
 ) {
@@ -573,14 +632,14 @@ const coverPreview = computed(() => {
   return null
 })
 
-
-
 getAuthors()
 getPublishers()
 getCities()
 getTypes()
 getLanguages()
 getContractors()
+getDisciplines()
+getQualifications()
 getStates()
 getAdmissions()
 getMaterials()
@@ -600,16 +659,14 @@ getContentTypes()
       <template v-slot:title>
         <div class="d-flex flex-column">
           <span class="text-h6 font-weight-bold">M-DATA</span>
-          <span class="text-subtitle-2 text-medium-emphasis"
-            >{{t('database_by_rk')}}</span
-          >
+          <span class="text-subtitle-2 text-medium-emphasis">{{ t('database_by_rk') }}</span>
         </div>
       </template>
 
       <template v-slot:append>
         <help-button video-id="fpyNAB4fvcU" class="mr-3" />
         <v-btn color="primary" prepend-icon="mdi-plus" to="/m-data/add" variant="flat"
-          >{{t('add')}}
+          >{{ t('add') }}
         </v-btn>
       </template>
     </v-app-bar>
@@ -757,7 +814,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного автора нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('author')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -782,7 +839,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного автора нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('author')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -805,12 +862,17 @@ getContentTypes()
 
               <v-row>
                 <v-col>
-                  <v-text-field
+                  <v-autocomplete
+                    v-model="form.qualification_id"
+                    :items="qualifications"
+                    item-title="title"
+                    item-value="id"
                     label="Квалификация"
                     placeholder="Поиск"
                     prepend-inner-icon="mdi-magnify"
                     variant="outlined"
-                  ></v-text-field>
+                    @update:search="getQualifications"
+                  ></v-autocomplete>
                 </v-col>
               </v-row>
 
@@ -875,7 +937,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного издателя нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('publisher')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -974,7 +1036,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данной рубрики нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('subjectHeading')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -1001,7 +1063,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного слова нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('tag')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -1105,7 +1167,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного жанра нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('genre')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -1185,6 +1247,42 @@ getContentTypes()
 
               <v-row>
                 <v-col>
+                  <v-autocomplete
+                    v-model="form.discipline_id"
+                    :items="disciplines"
+                    item-value="id"
+                    variant="outlined"
+                    label="Дисциплина"
+                    @update:search="getDisciplines"
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col>
+                  <v-autocomplete
+                    v-model="form.profession_id"
+                    :items="professions"
+                    item-value="id"
+                    variant="outlined"
+                    label="Профессия"
+                    @update:search="getProfessions"
+                  />
+                </v-col>
+                <v-col>
+                  <v-autocomplete
+                    v-model="form.specialty_id"
+                    :items="specialties"
+                    item-value="id"
+                    variant="outlined"
+                    label="Специальность"
+                    @update:search="getSpecialties"
+                  />
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col>
                   <v-text-field
                     v-model="form.link.title"
                     label="Ссылка"
@@ -1250,7 +1348,7 @@ getContentTypes()
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного контрагента нет в списке</span>
                         <v-btn color="primary" variant="flat" @click="setNewItem('contractor')"
-                          >{{t('add')}}
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -1368,7 +1466,7 @@ getContentTypes()
             <v-btn variant="outlined" @click="isActive.value = false">Отмена</v-btn>
             <v-spacer></v-spacer>
             <v-btn color="primary" variant="flat" @click="addNewItem(newItem.itemType, isActive)"
-              >{{t('add')}}
+              >{{ t('add') }}
             </v-btn>
           </v-card-actions>
         </v-card>

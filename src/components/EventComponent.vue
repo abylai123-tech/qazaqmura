@@ -1,10 +1,10 @@
 <script>
-import { DateTime } from 'luxon'
+import { VCalendar } from 'vuetify/labs/VCalendar'
 import { useAPI } from '@/api'
 import { useAuth } from '@/auth/index'
 
 export default {
-  components: {},
+  components: { VCalendar },
   data: () => ({
     tab: 0,
     dates: [],
@@ -24,7 +24,6 @@ export default {
       try {
         const api = useAPI()
         const auth = useAuth()
-        console.log(auth.userData.school)
         this.newEvent.school_id = auth.userData.value.school.id
         await api.postData('/v1/event', this.newEvent)
         this.newEvent = {
@@ -39,18 +38,30 @@ export default {
       }
     },
     async getEvents() {
+      this.events = []
       try {
         const api = useAPI()
         const response = await api.fetchData('/v1/event')
-        this.events = response.data.data.items
-        this.dates = this.events.map((event) => {
-          const dateTimeString = `${event.date}T${event.time}:00`
-          return DateTime.fromISO(dateTimeString)
+        response.data.data.items.forEach((element) => {
+          const [day, month, year] = element.date.split('.').map(Number); 
+          this.events.push({
+            title: element.title,
+            start: new Date(year, month - 1, day),
+            end: new Date(year, month - 1, day),
+            color: 'red',
+            description: element.description
+          })
         })
-        console.log(this.events)
       } catch (e) {
         console.error(e)
       }
+    },
+    formatDate(dateToFormat) {
+      const date = dateToFormat
+      const day = date.getDate().toString().length > 1 ? date.getDate() : '0' + date.getDate()
+      const month =
+        (date.getMonth() + 1).toString().length > 1 ? date.getMonth() + 1 : '0' + date.getMonth()
+      return `${day}.${month}.${date.getFullYear()}`
     },
     async downloadJournal() {
       try {
@@ -73,6 +84,26 @@ export default {
       } catch (e) {
         console.error(e)
       }
+    },
+    handleDate() {
+      let value = this.newEvent.date.replace(/\D/g, '')
+      if (value.length >= 3) {
+        value = value.slice(0, 2) + '.' + value.slice(2)
+      }
+      if (value.length >= 6) {
+        value = value.slice(0, 5) + '.' + value.slice(5)
+      }
+      if (value.length >= 10) {
+        value = value.slice(0, 10)
+      }
+      this.newEvent.date = value
+    },
+    handleTime() {
+      let value = this.newEvent.time.replace(/\D/g, '')
+      if (value.length >= 3) {
+        value = value.slice(0, 2) + ':' + value.slice(2)
+      }
+      this.newEvent.time = value
     }
   }
 }
@@ -84,6 +115,7 @@ export default {
     <v-card-text>
       <v-tabs v-model="tab" color="primary">
         <v-tab :value="0">Основное</v-tab>
+        <v-tab :value="1">Другие</v-tab>
       </v-tabs>
 
       <v-tabs-window v-model="tab">
@@ -91,26 +123,16 @@ export default {
           <v-container fluid>
             <v-row>
               <v-col>
-                <v-date-picker height="430" hide-header multiple v-model="dates" color="primary" />
-              </v-col>
-              <v-col>
-                <v-list class="overflow-auto" height="430" color="primary" lines="two">
-                  <v-list-item
-                    v-for="event in events"
-                    class="mb-4"
-                    :key="event.id"
-                    :value="event"
-                    rounded="xl"
-                    :title="event.title"
-                  >
-                    <v-list-item-subtitle>
-                      <div>{{ event.date }} - {{ event.time }}</div>
+                <v-calendar type="month" height="430" :events="events" color="primary">
+                  <template #event="{ event }">
+                    <div class="bordered mx-auto text-center">
+                      <div class="font-weight-bold">{{ event.title }}</div>
                       <div>{{ event.description }}</div>
-                    </v-list-item-subtitle>
-                  </v-list-item>
-                </v-list>
+                    </div>
+                  </template>
+                </v-calendar>
               </v-col>
-              <v-col>
+              <v-col cols="3">
                 <v-card>
                   <v-card-title>Добавление мероприятия</v-card-title>
                   <v-card-text>
@@ -133,19 +155,22 @@ export default {
                       <v-text-field
                         v-model="newEvent.date"
                         class="mb-3"
-                        type="date"
+                        type="text"
                         density="compact"
                         variant="outlined"
                         hide-details
                         label="Дата"
+                        
+                        @input="handleDate()"
                       />
                       <v-text-field
                         v-model="newEvent.time"
                         density="compact"
-                        type="time"
+                        type="text"
                         variant="outlined"
                         hide-details
                         label="Время"
+                        @input="handleTime()"
                       />
                     </v-form>
                   </v-card-text>
@@ -155,9 +180,32 @@ export default {
                 </v-card>
               </v-col>
             </v-row>
+            <v-row>
+              <v-col>
+                <v-list class="overflow-auto" height="430" color="primary" lines="two">
+                  <v-list-item
+                    v-for="event in events"
+                    class="mb-4"
+                    :key="event.id"
+                    :value="event"
+                    rounded="xl"
+                    :title="event.title"
+                  >
+                    <v-list-item-subtitle>
+                      <div>
+                        {{ formatDate(event.start) }}
+                      </div>
+                      <div>{{ event.description }}</div>
+                    </v-list-item-subtitle>
+                  </v-list-item>
+                </v-list>
+              </v-col>
+            </v-row>
           </v-container>
         </v-tabs-window-item>
-        <v-tabs-window-item :value="1"></v-tabs-window-item>
+        <v-tabs-window-item :value="1">
+          <v-container fluid></v-container>
+        </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>
     <v-card-actions>

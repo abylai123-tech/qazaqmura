@@ -293,6 +293,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/discipline',
+      name: 'discipline',
+      component: EntityView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/qualification',
+      name: 'qualification',
+      component: EntityView,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/regions',
       name: 'regions',
       component: RegionsView,
