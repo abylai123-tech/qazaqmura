@@ -14,7 +14,13 @@ export default {
       description: '',
       date: '',
       time: ''
-    }
+    },
+    headers: [
+      { key: 'title', title: 'Название' },
+      { key: 'description', title: 'Описание' },
+      { key: 'start', title: 'Начало' },
+      { key: 'end', title: 'Конец' },
+    ],
   }),
   mounted() {
     this.getEvents()
@@ -204,7 +210,16 @@ export default {
           </v-container>
         </v-tabs-window-item>
         <v-tabs-window-item :value="1">
-          <v-container fluid></v-container>
+          <v-container fluid>
+            <v-data-table :items="events.filter((event) => { return event.end > new Date() })" :headers="headers">
+              <template v-slot:[`item.start`]="{ item }">
+                {{ formatDate(item.start) }}
+              </template>
+              <template v-slot:[`item.end`]="{ item }">
+                {{ formatDate(item.end) }}
+              </template>
+            </v-data-table>
+          </v-container>
         </v-tabs-window-item>
       </v-tabs-window>
     </v-card-text>

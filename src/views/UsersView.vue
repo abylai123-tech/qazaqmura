@@ -7,6 +7,7 @@ import { useAuth } from '@/auth'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
+const auth = useAuth()
 
 interface User {
   id: number
@@ -144,7 +145,13 @@ const importFile: Ref<File[] | undefined> = ref(undefined)
 const createDrawer: Ref<boolean> = ref(false)
 const addContactPerson: Ref<boolean> = ref(false)
 const specialties = ref([])
-const isCollege: Ref<boolean> = ref(false)
+const isCollege = ref(false)
+watch(auth.userData, (value) => {
+  console.log('User Data:', value)
+  if (value && value.school.organization && value.school.organization.id === 3) {
+    isCollege.value = true
+  }
+})
 const addStructure: Ref<boolean> = ref(false)
 const userRelative: Ref<{ id: number; title: string }[]> = ref([])
 const roles: Ref<{ id: number; title: string }[]> = ref([])
@@ -310,8 +317,6 @@ function formatDate(dateToFormat: string) {
 
   return `${day}.${month}.${year}`
 }
-
-const auth = useAuth()
 
 const createUser = async () => {
   try {
@@ -602,7 +607,7 @@ getOrganizations()
           <v-autocomplete
             v-if="
               requestBody.role &&
-              requestBody.role.id === 3 &&
+              (requestBody.role.id === 3 || requestBody.role.id === 10) &&
               role &&
               role.some((item) => {
                 return item.id === 1
@@ -726,12 +731,7 @@ getOrganizations()
           color="primary"
           :label="t('structure')"
         ></v-switch>
-        <v-switch
-          v-model="isCollege"
-          class="ml-2"
-          color="primary"
-          label="Колледж"
-        ></v-switch>
+        <v-switch v-model="isCollege" class="ml-2" color="primary" label="Колледж"></v-switch>
       </v-list-item>
 
       <v-list-item v-if="addContactPerson">

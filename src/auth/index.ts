@@ -34,7 +34,7 @@ interface Data {
       address: string
       zip_code: string
     }
-    organization: null
+    organization: null | { id: number, title: string }
   }
   avatar: null
   user_data: {

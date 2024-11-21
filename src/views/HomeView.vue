@@ -283,7 +283,7 @@ const ministryStatistics = ref([
 ])
 
 const statistics = computed(() => {
-  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3)) {
+  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
     return librarianStatistics.value
   } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 4)) {
     return classroomStatistics.value
@@ -913,11 +913,11 @@ watch(selectedOrganizationType, () => {
 })
 
 
-if (role.value === 3) {
+if (role.value === 3 || role.value === 10) {
   getDashboard()
 }
 
-if (role.value === 4) {
+if (role.value === 4 || role.value === 11) {
   getClassroomStatistics()
 }
 
@@ -1528,7 +1528,7 @@ getInventory()
         <v-col cols="3">
           <StatisticsList :statistics="statistics"></StatisticsList>
         </v-col>
-        <v-col v-if="role === 3" cols="6">
+        <v-col v-if="role === 3 || role === 10" cols="6">
           <!-- <v-card>
             <v-card-title>{{ t('issue_return_statistics') }}</v-card-title>
             <v-card-subtitle>{{ t('easy_to_track_statistics') }}</v-card-subtitle>
@@ -1587,7 +1587,7 @@ getInventory()
             </v-card-text>
           </v-card>
         </v-col>
-        <v-col v-if="role === 3" cols="3">
+        <v-col v-if="role === 3 || role === 10" cols="3">
           <v-card>
             <v-card-title>{{ t('issue_return') }}</v-card-title>
             <v-card-subtitle>Быстрый поиск по ИИН</v-card-subtitle>
@@ -1652,7 +1652,7 @@ getInventory()
           </v-card>
         </v-col>
 
-        <v-col v-if="role === 4">
+        <v-col v-if="role === 4 || role === 11">
           <v-card title="Список">
             <v-card-text>
               <v-data-table :headers="classroomHeaders" :items="classroomItems">
@@ -1671,7 +1671,7 @@ getInventory()
           </v-card>
         </v-col>
 
-        <v-col v-if="role === 4" cols="3">
+        <v-col v-if="role === 4 || role === 11" cols="3">
           <v-card>
             <v-card-title>Заявки на класс</v-card-title>
             <v-card-subtitle>Выдача на класс</v-card-subtitle>
@@ -1791,7 +1791,7 @@ getInventory()
         </v-col>
       </v-row>
 
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col cols="3">
           <CountryModal></CountryModal>
         </v-col>
@@ -1827,7 +1827,7 @@ getInventory()
           </v-card>
         </v-col>
       </v-row>
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col cols="12">
           <v-card title="Состояние библиотеки">
             <v-card-text>
@@ -1969,7 +1969,7 @@ getInventory()
           </v-card>
         </v-col>
       </v-row>
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col>
           <v-card>
             <v-card-title>{{ t('fund_status') }}</v-card-title>
@@ -2016,7 +2016,7 @@ getInventory()
         </v-col>
       </v-row>
 
-      <v-row v-if="role === 4">
+      <v-row v-if="role === 4 || role === 11">
         <v-col>
           <v-card>
             <v-card-title>История заявок</v-card-title>
@@ -2522,7 +2522,7 @@ getInventory()
         </v-col>
       </v-row>
 
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col>
           <event-component />
         </v-col>

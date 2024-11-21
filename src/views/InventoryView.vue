@@ -155,7 +155,7 @@ const getInventoryCount = async (id: number) => {
 
 const sort = ref(0)
 
-if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3)) {
+if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
   getInventoryCount(auth.userData.value.school.id)
 }
 

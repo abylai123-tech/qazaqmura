@@ -1,18 +1,21 @@
 <script lang="ts" setup>
 import { useAPI } from '@/api'
-import { computed, type Ref, ref } from 'vue'
+import { computed, type Ref, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import HelpButton from '@/components/HelpButton.vue'
 import returned from '@/assets/return.svg'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
+import { useAuth } from '@/auth'
 const { t } = useI18n()
 const api = useAPI()
 const route = useRoute()
+const auth = useAuth()
 
 const show1 = ref(false)
 const show2 = ref(false)
 const show3 = ref(false)
+
 const passwordForm: Ref<{
   old_password: string
   new_password: string
@@ -174,8 +177,13 @@ const requestAmount = ref(0)
 const quarter = ref(null)
 const userRelative: Ref<{ id: number; title: string }[]> = ref([])
 const roles: Ref<{ id: number; title: string }[]> = ref([])
-const isCollege = ref(false)
-
+const isCollege = ref(false);
+watch(auth.userData, (value) => {
+  console.log('User Data:', value);
+  if (value && value.school.organization && value.school.organization.id === 3) {
+    isCollege.value = true;
+  }
+})
 async function getRelatives() {
   try {
     const response = await api.fetchData('/v1/user/relative')

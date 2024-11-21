@@ -159,9 +159,9 @@ const showLayout = computed(() => {
 })
 
 const navigationDrawerItems = computed(() => {
-  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3)) {
+  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
     return navigation.value
-  } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 4)) {
+  } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 4 || obj.id === 11)) {
     return classroomNavigation.value
   } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 7)) {
     return publisherNavigation.value
