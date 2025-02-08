@@ -122,6 +122,17 @@ const filters: Ref<Filter> = ref({
   epub: false
 })
 
+const pageInput: Ref<number> = ref(1)
+
+function goToPage() {
+  const pageNum = Number(pageInput.value)
+  if (pageNum >= 1 && pageNum <= length.value) {
+    page.value = pageNum
+  } else {
+    pageInput.value = page.value // Reset to current page if invalid
+  }
+}
+
 async function getBooks() {
   loading.value = true
   try {
@@ -319,7 +330,8 @@ getContractors()
 getStates()
 getAdmissionBlock()
 
-watch(page, () => {
+watch(page, (newValue) => {
+  pageInput.value = newValue
   getBooks()
 })
 </script>
@@ -330,10 +342,8 @@ watch(page, () => {
     <v-app-bar>
       <template v-slot:title>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">{{t('fund')}}</span>
-          <span class="text-subtitle-2 text-medium-emphasis"
-            >{{t('database_by_rk')}}</span
-          >
+          <span class="text-h6 font-weight-bold">{{ t('fund') }}</span>
+          <span class="text-subtitle-2 text-medium-emphasis">{{ t('database_by_rk') }}</span>
         </div>
       </template>
 
@@ -424,11 +434,15 @@ watch(page, () => {
                       </v-row>
                       <v-row>
                         <v-col cols="4">
-                          <div><strong>{{t('year_of_publication')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('year_of_publication') }}:</strong>
+                          </div>
                           <div>{{ item.year }}</div>
                         </v-col>
                         <v-col cols="4">
-                          <div><strong>{{t('language')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('language') }}:</strong>
+                          </div>
                           <div>{{ item.language ? item.language.join(', ') : '' }}</div>
                         </v-col>
                         <v-col cols="4"></v-col>
@@ -440,7 +454,9 @@ watch(page, () => {
                           <div>{{ item.contractor }}</div>
                         </v-col>
                         <v-col cols="4">
-                          <div><strong>{{t('reception_date')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('reception_date') }}:</strong>
+                          </div>
                           <div>{{ item.admission_at }}</div>
                         </v-col>
                         <v-col cols="4">
@@ -450,11 +466,15 @@ watch(page, () => {
                       </v-row>
                       <v-row>
                         <v-col cols="4">
-                          <div><strong>{{ t('quantity') }}:</strong></div>
+                          <div>
+                            <strong>{{ t('quantity') }}:</strong>
+                          </div>
                           <div>{{ item.amount }}</div>
                         </v-col>
                         <v-col v-if="item.price" cols="4">
-                          <div><strong>{{t('price')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('price') }}:</strong>
+                          </div>
                           <div>{{ item.price }} ₸</div>
                         </v-col>
                         <v-col v-if="item.price && item.amount" cols="4">
@@ -492,7 +512,7 @@ watch(page, () => {
                       v-bind="props"
                       variant="outlined"
                       @click="selectItem(item)"
-                      >{{t('edit_data')}}
+                      >{{ t('edit_data') }}
                     </v-btn>
                   </template>
 
@@ -527,7 +547,9 @@ watch(page, () => {
                               </div>
                               <v-row class="mt-2">
                                 <v-col>
-                                  <div><strong>{{t('language')}}:</strong></div>
+                                  <div>
+                                    <strong>{{ t('language') }}:</strong>
+                                  </div>
                                   <div>
                                     {{
                                       item.book_language
@@ -537,13 +559,17 @@ watch(page, () => {
                                   </div>
                                 </v-col>
                                 <v-col>
-                                  <div><strong>{{t('year_of_publication')}}:</strong></div>
+                                  <div>
+                                    <strong>{{ t('year_of_publication') }}:</strong>
+                                  </div>
                                   <div>{{ item.book ? item.book.year : '' }}</div>
                                 </v-col>
                               </v-row>
                               <v-row>
                                 <v-col>
-                                  <div><strong>{{t('publisher')}}:</strong></div>
+                                  <div>
+                                    <strong>{{ t('publisher') }}:</strong>
+                                  </div>
                                   <div>
                                     {{ item.contractor }}
                                   </div>
@@ -645,7 +671,7 @@ watch(page, () => {
                           @click="
                             submitClear(isActive, item.book_school_id ? item.book_school_id : null)
                           "
-                          >{{t('yes')}}
+                          >{{ t('yes') }}
                         </v-btn>
                         <v-btn class="ml-3 mr-auto" variant="tonal" @click="isActive.value = false"
                           >Отмена
@@ -672,7 +698,7 @@ watch(page, () => {
                           @click="
                             submitDeletion(isActive, item.book_school_id ? item.book_school_id : 0)
                           "
-                          >{{t('yes')}}
+                          >{{ t('yes') }}
                         </v-btn>
                         <v-btn class="ml-3 mr-auto" variant="tonal" @click="isActive.value = false"
                           >Отмена
@@ -688,16 +714,53 @@ watch(page, () => {
       </v-card>
     </v-row>
 
-    <v-row class="mt-4">
+    <v-row class="mt-4 mx-1">
       <v-pagination
         v-model="page"
         :length="length"
         :total-visible="6"
         active-color="primary"
-        class="ml-auto mr-2"
+        class="ml-auto"
         size="small"
         variant="flat"
       ></v-pagination>
+
+      <div class="d-flex align-center mr-2">
+        <v-text-field
+          variant="outlined"
+          v-model="pageInput"
+          :min="1"
+          :max="length"
+          density="compact"
+          hide-details
+          class="mx-2"
+          style="width: 120px"
+        >
+          <template v-slot:append>
+            <v-tooltip
+              :model-value="pageInput < 1 || pageInput > length"
+              location="bottom"
+              :text="`Введите число от 1 до ${length}`"
+            >
+              <template v-slot:activator="{ props }">
+                <v-icon
+                  v-bind="props"
+                  color="error"
+                  icon="mdi-alert-circle"
+                  v-show="pageInput < 1 || pageInput > length"
+                ></v-icon>
+              </template>
+            </v-tooltip>
+          </template>
+        </v-text-field>
+        <v-btn
+          icon="mdi-magnify"
+          size="small"
+          variant="flat"
+          @click="goToPage"
+          class="rounded-0"
+        ></v-btn>
+      </div>
     </v-row>
   </v-container>
 </template>

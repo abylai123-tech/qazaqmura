@@ -64,6 +64,15 @@ const navigation = computed(() => [
     }
   },
   {
+    title: 'Отчеты',
+    value: 10,
+    props: {
+      prependIcon: 'mdi-file-chart',
+      appendIcon: 'mdi-chevron-right',
+      to: { name: 'reports' }
+    }
+  },
+  {
     title: t('counterparty'),
     value: 5,
     props: {
@@ -95,15 +104,15 @@ const navigation = computed(() => [
       to: { name: 'purchase' }
     }
   },
-  {
-    title: 'Конкурс',
-    value: 9,
-    props: {
-      prependIcon: 'mdi-library',
-      appendIcon: 'mdi-chevron-right',
-      to: { name: 'contest' }
-    }
-  }
+  // {
+  //   title: 'Конкурс',
+  //   value: 9,
+  //   props: {
+  //     prependIcon: 'mdi-library',
+  //     appendIcon: 'mdi-chevron-right',
+  //     to: { name: 'contest' }
+  //   }
+  // }
 ])
 
 const publisherNavigation = computed(() => [
@@ -161,7 +170,10 @@ const showLayout = computed(() => {
 const navigationDrawerItems = computed(() => {
   if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
     return navigation.value
-  } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 4 || obj.id === 11)) {
+  } else if (
+    auth.user.value &&
+    auth.user.value.roles.some((obj) => obj.id === 4 || obj.id === 11)
+  ) {
     return classroomNavigation.value
   } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 7)) {
     return publisherNavigation.value
@@ -191,6 +203,8 @@ const navigationActive = computed(() => {
       return 14
     case 'quotes':
       return 20
+    case 'reports':
+      return 10
     default:
       return 0
   }

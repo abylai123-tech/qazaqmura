@@ -30,6 +30,7 @@ import BkView from '@/views/BkView.vue'
 import UpdateView from '@/views/UpdateView.vue'
 import QuotesView from '@/views/QuotesView.vue'
 import OnlineLibrary from '@/views/OnlineLibrary.vue'
+import ReportsView from '@/views/ReportsView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -332,6 +333,12 @@ const router = createRouter({
       path: '/online-library',
       name: 'online-library',
       component: OnlineLibrary,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/reports',
+      name: 'reports',
+      component: ReportsView,
       meta: { requiresAuth: true }
     }
   ]
