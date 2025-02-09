@@ -2,11 +2,16 @@
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import logo from '@/assets/logo.svg'
 import avatar from '@/assets/image-ava.svg'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useAuth } from '@/auth/index'
 import qrcode from '@/assets/qrcode.pdf'
 import { useI18n } from 'vue-i18n'
+import Toast from '@/components/Toast.vue'
+import { useToastStore } from '@/stores/toast'
+
 const { t, locale } = useI18n()
+const toast = useToastStore()
+
 const menu = ref(false)
 const helpMenu = ref(false)
 const route = useRoute()
@@ -103,7 +108,7 @@ const navigation = computed(() => [
       appendIcon: 'mdi-chevron-right',
       to: { name: 'purchase' }
     }
-  },
+  }
   // {
   //   title: 'Конкурс',
   //   value: 9,
@@ -278,6 +283,7 @@ const guideItems = [
 
 <template>
   <v-layout class="app-background">
+    <Toast />
     <v-app-bar v-if="showLayout" class="app-border" color="white" flat>
       <v-app-bar-title>
         <v-img :src="logo" :width="180" alt="logo" class="ml-6"></v-img>

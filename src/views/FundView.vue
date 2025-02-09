@@ -13,8 +13,10 @@ import fiction from '@/assets/admission_fiction.pdf'
 import HelpButton from '@/components/HelpButton.vue'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const api = useAPI()
+const toast = useToastStore()
 
 interface Contractor {
   address: string
@@ -39,6 +41,8 @@ interface Book {
   book_bbk: { id: number; title: string }[]
   admission_at: string
   book_admission_id: number
+  book_school_id?: number
+  book_state_id?: number | null
 }
 
 interface SubBook {
@@ -101,7 +105,9 @@ const selectedItem: Ref<Book> = ref({
   book_state: '',
   book_bbk: [],
   admission_at: '',
-  book_admission_id: 0
+  book_admission_id: 0,
+  book_school_id: 0,
+  book_state_id: null
 })
 
 interface Filter {
@@ -150,21 +156,31 @@ async function getBooks() {
       length.value = response.data.meta.last_page
     }
   } catch (error: any) {
+    toast.error('Ошибка при загрузке списка книг')
     console.error('Error:', error.message)
   }
 }
 
 const editData = async (isActive: Ref<boolean>) => {
-  const bookSchoolForm = {
-    amount: selectedItem.value.amount,
-    price: selectedItem.value.price,
-    admission_at: admissionDate.value,
-    contractor_id: selectedItem.value.contractor2.id
+  try {
+    const bookSchoolForm = {
+      amount: selectedItem.value.amount,
+      price: selectedItem.value.price,
+      admission_at: admissionDate.value,
+      contractor_id: selectedItem.value.contractor
+    }
+    await api.putData(`/v1/book/school/${selectedItem.value.book_school_id}`, bookSchoolForm)
+    await getBooks()
+    toast.success('Данные успешно обновлены')
+    isActive.value = false
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при обновлении данных'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
-  await api.putData(`/v1/book/school/${selectedItem.value.book_school_id}`, bookSchoolForm)
-  await getBooks()
-
-  isActive.value = false
 }
 
 const filterBlock = {
@@ -176,32 +192,39 @@ const filterBlock = {
 }
 
 async function downloadPDF(title: string, id?: number) {
-  const link = document.createElement('a')
-  if (title === 'bookForm') {
-    const response = await api.postData(`/v1/book/school/book-form/pdf/${id}`, null, true)
-    if (response.data) fileDownload(response.data, 'Книжный формуляр.pdf')
-  } else if (title === 'publisher') {
-    const response = await api.postData(`/v1/book/school/publisher/pdf`, null, true)
-    if (response.data) fileDownload(response.data, 'Отчет по издателям.pdf')
-  } else if (title === 'admission') {
-    const response = await api.postData('/v1/book/school/admission/pdf', null, true)
-    if (response.data) fileDownload(response.data, 'admission.pdf')
-  } else if (title === 'fund') {
-    const response = await api.postData('/v1/book/school/book/pdf', null, true)
-    if (response.data) fileDownload(response.data, 'school_fund.pdf')
-  } else if (title === 'nonfiction') {
-    const response = await api.postData('/v1/book/school/book/pdf?type_id=1', null, true)
-    if (response.data) fileDownload(response.data, 'Список учебников.pdf')
-  } else if (title === 'fiction') {
-    const response = await api.postData('/v1/book/school/book/pdf?type_id=17', null, true)
-    if (response.data) fileDownload(response.data, 'Список основного фонда.pdf')
-  } else {
-    const response = await api.postData(`/v1/book/school/catalog-card/pdf/${id}`, null, true)
-    if (response.data) fileDownload(response.data, 'Каталожная карточка.pdf')
+  try {
+    if (title === 'bookForm') {
+      const response = await api.postData(`/v1/book/school/book-form/pdf/${id}`, null, true)
+      if (response.data) {
+        fileDownload(response.data, 'Книжный формуляр.pdf')
+        toast.success('Книжный формуляр успешно скачан')
+      }
+    } else if (title === 'publisher') {
+      const response = await api.postData(`/v1/book/school/publisher/pdf`, null, true)
+      if (response.data) {
+        fileDownload(response.data, 'Отчет по издателям.pdf')
+        toast.success('Отчет по издателям успешно скачан')
+      }
+    } else if (title === 'admission') {
+      const response = await api.postData('/v1/book/school/admission/pdf', null, true)
+      if (response.data) fileDownload(response.data, 'admission.pdf')
+    } else if (title === 'fund') {
+      const response = await api.postData('/v1/book/school/book/pdf', null, true)
+      if (response.data) fileDownload(response.data, 'school_fund.pdf')
+    } else if (title === 'nonfiction') {
+      const response = await api.postData('/v1/book/school/book/pdf?type_id=1', null, true)
+      if (response.data) fileDownload(response.data, 'Список учебников.pdf')
+    } else if (title === 'fiction') {
+      const response = await api.postData('/v1/book/school/book/pdf?type_id=17', null, true)
+      if (response.data) fileDownload(response.data, 'Список основного фонда.pdf')
+    } else {
+      const response = await api.postData(`/v1/book/school/catalog-card/pdf/${id}`, null, true)
+      if (response.data) fileDownload(response.data, 'Каталожная карточка.pdf')
+    }
+  } catch (error: any) {
+    toast.error('Ошибка при скачивании документа')
+    console.error('Error:', error)
   }
-  // link.download = 'document.pdf'
-  // link.click()
-  // document.body.removeChild(link)
 }
 
 async function submitClear(isActive: Ref<boolean>, bookId: number | null) {
@@ -209,9 +232,13 @@ async function submitClear(isActive: Ref<boolean>, bookId: number | null) {
     const response = await api.deleteData(`/v1/book/school/inventory/${bookId}`)
     isActive.value = false
     await getBooks()
-    snackbar.value = true
-    snackbarText.value = response.data.message
-  } catch (error) {
+    toast.success(response.data.message || 'Инвентаризация успешно сброшена')
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при сбросе инвентаризации'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }
@@ -236,10 +263,14 @@ async function submitDeletion(isActive: Ref<boolean>, bookId: number) {
   try {
     const response = await api.deleteData(`/v1/book/school/${bookId}`)
     isActive.value = false
-    snackbar.value = true
-    snackbarText.value = response.data.message
+    toast.success(response.data.message || 'Книга успешно удалена из фонда')
     await getBooks()
-  } catch (error) {
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при удалении книги'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }
@@ -316,9 +347,6 @@ async function getAdmissionBlock() {
   }
 }
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-
 const getTotal = (price: number, amount: number) => {
   if (!price || !amount) return ''
   else return price * amount + ' ₸'
@@ -338,7 +366,6 @@ watch(page, (newValue) => {
 
 <template>
   <v-container fluid>
-    <v-snackbar v-model="snackbar" :timeout="1000">{{ snackbarText }}</v-snackbar>
     <v-app-bar>
       <template v-slot:title>
         <div class="d-flex flex-column">

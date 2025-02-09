@@ -5,8 +5,10 @@ import nocover from '@/assets/no-book-cover.svg'
 import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const api = useAPI()
+const toast = useToastStore()
 
 interface Book {
   id: number
@@ -223,7 +225,10 @@ async function getBooks() {
       booksTotal.value = response.data.meta.total
     }
   } catch (error: any) {
+    toast.error('Ошибка при загрузке списка книг')
     console.error('Error:', error.message)
+  } finally {
+    loading.value = false
   }
 }
 
@@ -271,8 +276,14 @@ async function sendRequest(
     await api.postData('/v1/user/request', form)
     isActive.value = false
     message.value = ''
-  } catch (error) {
-    console.error('Error:', error)
+    toast.success('Запрос успешно отправлен')
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при отправке запроса'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
+    console.error('Error:', error.message)
   }
 }
 
@@ -283,6 +294,7 @@ async function sendAdmission(admissionForm: BookAdmission, isActive: Ref<boolean
   try {
     await api.postData('/v1/book/school/link', { books: [form] })
     isActive.value = false
+    toast.success('Книга успешно добавлена в фонд')
     admission.value = {
       amount: 0,
       book_id: 0,
@@ -292,7 +304,12 @@ async function sendAdmission(admissionForm: BookAdmission, isActive: Ref<boolean
       contractor_id: null,
       book_admission_id: null
     }
-  } catch (error) {
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при добавлении книги в фонд'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }
@@ -538,8 +555,14 @@ const sorting: Ref<string | null> = ref(null)
 const local: Ref<boolean> = ref(false)
 
 const deleteItem = async (id: number, isActive: Ref<boolean>) => {
-  await api.deleteData(`/v1/book/${id}`)
-  await getBooks()
+  try {
+    await api.deleteData(`/v1/book/${id}`)
+    await getBooks()
+    toast.success('Книга успешно удалена')
+  } catch (error: any) {
+    toast.error('Ошибка при удалении книги')
+    console.error('Error:', error.message)
+  }
   isActive.value = false
 }
 
@@ -1360,7 +1383,7 @@ watch(page, (newValue) => {
 
                                   <v-card-actions>
                                     <v-btn
-                                      class="ml-auto mr-3"
+                                      class="ml-auto mr-auto mr-3"
                                       variant="tonal"
                                       @click="isActive.value = false"
                                       >{{ t('cancel') }}

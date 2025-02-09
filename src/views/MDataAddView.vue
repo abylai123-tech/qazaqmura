@@ -6,8 +6,10 @@ import { useAuth } from '@/auth'
 import BkDialog from '@/components/bkDialog.vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const api = useAPI()
+const toast = useToastStore()
 
 interface Form {
   author_id: number[] | null
@@ -191,6 +193,7 @@ async function getAuthors(search = null) {
     const response = await api.fetchData<{ data: { items: Author[] } }>(request)
     if (response.data) authors.value = response.data.data.items
   } catch (error: any) {
+    toast.error('Ошибка при загрузке списка авторов')
     console.error('Error:', error.message)
   }
 }
@@ -220,10 +223,42 @@ async function addNewItem(
   }
   try {
     const response = await api.postData(`/v1/${request}`, requestBody)
-  } catch (e) {
-    console.error('Error:', e)
+    if (itemType === 'author') {
+      await getAuthors()
+      toast.success('Автор успешно добавлен')
+    } else if (itemType === 'publisher') {
+      await getPublishers()
+      toast.success('Издатель успешно добавлен')
+    } else if (itemType === 'contractor') {
+      await getContractors()
+      toast.success('Контрагент успешно добавлен')
+    } else if (itemType === 'tag') {
+      await getTags()
+      toast.success('Ключевое слово успешно добавлено')
+    } else if (itemType === 'genre') {
+      await getGenres()
+      toast.success('Жанр успешно добавлен')
+    } else if (itemType === 'subjectHeading') {
+      await getSubjectHeadings()
+      toast.success('Предметная рубрика успешно добавлена')
+    }
+    isActive.value = false
+  } catch (error: any) {
+    let errorMessage = 'Произошла ошибка при добавлении. Попробуйте еще раз'
+
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const firstError = Object.values(errors)[0]
+      if (Array.isArray(firstError) && firstError.length > 0) {
+        errorMessage = firstError[0]
+      }
+    }
+
+    toast.error(errorMessage)
+    console.error('Error:', error.message)
   }
-  isActive.value = false
 }
 
 async function getPublishers(search = null) {
@@ -235,6 +270,7 @@ async function getPublishers(search = null) {
     const response = await api.fetchData<{ data: { items: Publisher[] } }>(request)
     if (response.data) publishers.value = response.data.data.items
   } catch (error: any) {
+    toast.error('Ошибка при загрузке списка издателей')
     console.error('Error:', error.message)
   }
 }
@@ -287,6 +323,7 @@ async function getContractors(search = null) {
     const response = await api.fetchData<{ data: { items: Contractor[] } }>(request)
     if (response.data) contractors.value = response.data.data.items
   } catch (error: any) {
+    toast.error('Ошибка при загрузке списка контрагентов')
     console.error('Error:', error.message)
   }
 }
@@ -598,8 +635,22 @@ async function sendBookData() {
       epubUpload.append('book_id', id)
       await api.postData('/v1/book/epub', epubUpload)
     }
+    toast.success('Данные успешно добавлены')
     await router.push('/m-data')
   } catch (error: any) {
+    let errorMessage = 'Произошла ошибка при добавлении данных. Попробуйте еще раз'
+
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    } else if (error.response?.data?.errors) {
+      const errors = error.response.data.errors
+      const firstError = Object.values(errors)[0]
+      if (Array.isArray(firstError) && firstError.length > 0) {
+        errorMessage = firstError[0]
+      }
+    }
+
+    toast.error(errorMessage)
     console.error('Error:', error.message)
   }
 }
