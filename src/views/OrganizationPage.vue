@@ -5,9 +5,11 @@ import HelpButton from '@/components/HelpButton.vue'
 import { type Ref, ref, watch } from 'vue'
 import school from '@/assets/school.svg'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const api = useAPI()
 const route = useRoute()
+const toast = useToastStore()
 
 const headers = [
   { key: 'id', title: 'ID' },
@@ -16,10 +18,17 @@ const headers = [
   { key: 'actions', title: t('status') }
 ]
 
-const items = [
-  { id: 1, name: 'The Life and Diaries of Anne Frank', activity: 1 },
-  { id: 40, name: 'The Life and Diaries of Anne Frank', activity: 2 }
+const userHeaders = [
+  { title: 'ID', key: 'id' },
+  { title: t('full_name'), key: 'name' },
+  { title: t('data'), key: 'data' },
+  { title: t('status'), key: 'status' },
+  { title: '', key: 'actions', sortable: false }
 ]
+
+const items: Ref<any[]> = ref([])
+const users: Ref<any[]> = ref([])
+const loading = ref(false)
 
 const organization = ref({
   organization: { label: '' },
@@ -51,9 +60,16 @@ const subscriptionTypes = [
 ]
 
 const getOrganizationTypes = async () => {
-  const response = await api.fetchData<{ data: { items: OrganizationType[] } }>('/v1/organization')
-  if (response.data) {
-    organizationTypes.value = response.data.data.items
+  try {
+    const response = await api.fetchData<{ data: { items: OrganizationType[] } }>(
+      '/v1/organization'
+    )
+    if (response.data) {
+      organizationTypes.value = response.data.data.items
+    }
+  } catch (error: any) {
+    toast.error('Ошибка при загрузке типов организаций')
+    console.error('Error:', error)
   }
 }
 
@@ -98,7 +114,8 @@ const getRegions = async (parentId: number | null = null) => {
       else if (parentRegion.value) childrenRegions.value = response.data.data.items
       else parentRegions.value = response.data.data.items
     }
-  } catch (e) {
+  } catch (e: any) {
+    toast.error('Ошибка при загрузке списка регионов')
     console.error('Error:', e)
   }
 }
@@ -127,28 +144,38 @@ function formatDate(dateToFormat: string) {
 }
 
 const sendEdit = async () => {
-  if (requestBody.value.subscription.activated_at) {
-    requestBody.value.subscription.activated_at = formatDate(
-      requestBody.value.subscription.activated_at
-    )
-  }
-
-  await api.putData(`/v1/school/${route.params.id}`, requestBody.value)
-  requestBody.value = {
-    name: '',
-    bin: '',
-    address: '',
-    zip_code: '',
-    region_id: null,
-    organization_id: null,
-    subscription: {
-      period: null,
-      type: null,
-      activated_at: null
+  try {
+    if (requestBody.value.subscription.activated_at) {
+      requestBody.value.subscription.activated_at = formatDate(
+        requestBody.value.subscription.activated_at
+      )
     }
+
+    await api.putData(`/v1/school/${route.params.id}`, requestBody.value)
+    toast.success('Данные организации успешно обновлены')
+    requestBody.value = {
+      name: '',
+      bin: '',
+      address: '',
+      zip_code: '',
+      region_id: null,
+      organization_id: null,
+      subscription: {
+        period: null,
+        type: null,
+        activated_at: null
+      }
+    }
+    await getOrganization()
+    organizationDrawer.value = false
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при обновлении данных организации'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
-  await getOrganization()
-  organizationDrawer.value = false
 }
 
 const editOrganization = () => {
@@ -168,9 +195,14 @@ const regionName = ref('')
 
 const findRegion = async (regionId: number | null) => {
   if (regionId) {
-    const response = await api.fetchData(`/v1/region/${regionId}`)
-    if (response.data) {
-      regionName.value = response.data.title
+    try {
+      const response = await api.fetchData(`/v1/region/${regionId}`)
+      if (response.data) {
+        regionName.value = response.data.title
+      }
+    } catch (error: any) {
+      toast.error('Ошибка при загрузке данных региона')
+      console.error('Error:', error)
     }
   }
 }
@@ -191,12 +223,50 @@ async function getOrganization() {
     const response = await api.fetchData(`/v1/school/${route.params.id}`)
     organization.value = response.data
     await findRegion(organization.value.region_id)
-  } catch (error) {
-    console.log('Error:', error)
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при загрузке данных организации'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
+    console.error('Error:', error)
+  }
+}
+
+async function getUsers() {
+  loading.value = true
+  try {
+    const response = await api.fetchData('/v1/user?role_id=3')
+    if (response.data) {
+      users.value = response.data.data.items.map((user) => ({
+        id_: user.id_,
+        user_id: user.id,
+        name: `${user.user_data?.fathername || ''} ${user.user_data?.firstname || ''}`.trim(),
+        login: user.login,
+        email: user.email,
+        phone: user.phone,
+        status: user.status,
+        role: user.roles[0]?.label,
+        activated_at: user.activated_at,
+        last_used_at: user.last_used_at,
+        classroom: user.classroom,
+        subscription: user.subscription
+      }))
+    }
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при загрузке списка библиотекарей'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
+    console.error('Error:', error)
+  } finally {
+    loading.value = false
   }
 }
 
 getOrganization()
+getUsers()
 </script>
 
 <template>
@@ -215,7 +285,7 @@ getOrganization()
       </v-list-item>
       <v-divider></v-divider>
       <v-list-item class="my-2">
-        <span class="font-weight-bold">{{t('basic')}}</span>
+        <span class="font-weight-bold">{{ t('basic') }}</span>
       </v-list-item>
 
       <v-list-item>
@@ -226,7 +296,11 @@ getOrganization()
           variant="outlined"
         ></v-text-field>
         <v-text-field v-model="requestBody.bin" label="БИН" variant="outlined"></v-text-field>
-        <v-textarea v-model="requestBody.address" :label="t('address')" variant="outlined"></v-textarea>
+        <v-textarea
+          v-model="requestBody.address"
+          :label="t('address')"
+          variant="outlined"
+        ></v-textarea>
         <v-select
           v-model="requestBody.organization_id"
           :items="organizationTypes"
@@ -318,8 +392,10 @@ getOrganization()
       </v-list-item>
 
       <v-list-item class="mt-2 mb-6 text-center">
-        <v-btn class="mr-10" variant="tonal" @click="organizationDrawer = false">{{t('close')}}</v-btn>
-        <v-btn color="primary" variant="flat" @click="sendEdit">{{t('add')}}</v-btn>
+        <v-btn class="mr-10" variant="tonal" @click="organizationDrawer = false">{{
+          t('close')
+        }}</v-btn>
+        <v-btn color="primary" variant="flat" @click="sendEdit">{{ t('add') }}</v-btn>
       </v-list-item>
     </v-navigation-drawer>
 
@@ -342,7 +418,7 @@ getOrganization()
                     {{ organization.description.bin }}
                   </div>
                   <div>
-                    <v-chip color="green" variant="flat">{{t('active')}}</v-chip>
+                    <v-chip color="green" variant="flat">{{ t('active') }}</v-chip>
                   </div>
                 </v-col>
                 <v-divider vertical></v-divider>
@@ -361,13 +437,13 @@ getOrganization()
                     </v-col>
                     <v-col cols="3">
                       <div>
-                        {{t('mail')}}:<br />
+                        {{ t('mail') }}:<br />
                         <strong></strong>
                       </div>
                     </v-col>
                     <v-col cols="3">
                       <div>
-                        {{t('phone_number')}}:<br />
+                        {{ t('phone_number') }}:<br />
                         <strong></strong>
                       </div>
                     </v-col>
@@ -399,7 +475,7 @@ getOrganization()
                   <v-divider class="my-2"></v-divider>
                   <v-row>
                     <v-col cols="12">
-                      {{t('address')}}:<br />
+                      {{ t('address') }}:<br />
                       {{ organization.description.address }}
                     </v-col>
                   </v-row>
@@ -409,7 +485,7 @@ getOrganization()
                         append-icon="mdi-arrow-right"
                         variant="outlined"
                         @click="editOrganization"
-                        >{{t('edit_data')}}
+                        >{{ t('edit_data') }}
                       </v-btn>
                     </v-col>
                     <v-col cols="4">
@@ -428,7 +504,77 @@ getOrganization()
 
     <v-row>
       <v-col cols="12">
-        <v-data-table :headers="headers" :items="items">
+        <v-data-table
+          :headers="userHeaders"
+          :items="users"
+          :items-per-page="15"
+          :loading="loading"
+          class="mt-2"
+          show-select
+        >
+          <template v-slot:[`item.name`]="{ item }">
+            <div class="d-flex flex-column my-2">
+              <div>
+                {{ item.name }}
+              </div>
+              <div>
+                <span class="text-subtitle-2 text-medium-emphasis"
+                  >{{ t('first_activity') }}: {{ item.activated_at }}</span
+                >
+              </div>
+              <div>
+                <span class="text-subtitle-2 text-medium-emphasis"
+                  >{{ t('last_activity') }}: {{ item.last_used_at }}</span
+                >
+              </div>
+              <div class="my-2">
+                <v-chip
+                  v-if="item.role"
+                  class="mr-2"
+                  color="primary"
+                  size="small"
+                  variant="outlined"
+                  >{{ item.role }}
+                </v-chip>
+              </div>
+            </div>
+          </template>
+
+          <template v-slot:[`item.id`]="{ item }">
+            <div class="font-weight-bold">ID: {{ item.user_id }}</div>
+            <div class="text-medium-emphasis">{{ item.id_ }}</div>
+          </template>
+
+          <template v-slot:[`item.data`]="{ item }">
+            <div class="font-weight-bold">{{ item.login }}</div>
+            <div class="d-flex flex-column">
+              <span class="text-subtitle-2 text-medium-emphasis">{{ item.email }}</span>
+              <span class="text-subtitle-2 text-medium-emphasis">{{ item.phone }}</span>
+            </div>
+          </template>
+
+          <template v-slot:[`item.status`]="{ item }">
+            <v-chip :color="item.status ? 'green' : 'error'" size="small" variant="flat">
+              {{ item.status ? t('active') : 'Не активен' }}
+            </v-chip>
+          </template>
+
+          <template v-slot:[`item.actions`]="{ item }">
+            <div class="d-flex align-center">
+              <v-btn
+                :to="`/users/${item.user_id}`"
+                append-icon="mdi-arrow-right"
+                class="mr-2"
+                variant="outlined"
+                >{{ t('go_to') }}
+              </v-btn>
+              <v-btn
+                @click="downloadUser(item.id_, `${item.name}`)"
+                icon="mdi-download"
+                variant="text"
+              ></v-btn>
+            </div>
+          </template>
           <template v-slot:bottom></template>
         </v-data-table>
       </v-col>
