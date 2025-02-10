@@ -6,8 +6,10 @@ import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const auth = useAuth()
+const toast = useToastStore()
 
 interface User {
   id: number
@@ -344,7 +346,7 @@ const createUser = async () => {
       classroom.value.user_id = auth.user.value.id
 
       await api.postData('/v1/classroom/user', classroom.value)
-
+      toast.success('Пользователь успешно добавлен')
       createDrawer.value = false
       await getUsers()
 
@@ -373,7 +375,12 @@ const createUser = async () => {
       }
     }
     createDrawer.value = false
-  } catch (e) {
+  } catch (e: any) {
+    let errorMessage = 'Ошибка при создании пользователя'
+    if (e.response?.data?.message) {
+      errorMessage = e.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', e)
   }
 }
@@ -400,7 +407,8 @@ const getSchools = async () => {
         structureItem.classrooms = await getClassroom(structureItem.id)
       })
     })
-  } catch (e) {
+  } catch (e: any) {
+    toast.error('Ошибка при загрузке списка школ')
     console.error('Error:', e)
   }
 }
@@ -431,10 +439,18 @@ const role = computed(() => {
 })
 
 const downloadList = async (id?: number) => {
-  let url = '/v1/user/user/pdf'
-  if (id) url += `?role_id=${id}`
-  const response = await api.postData(url, null, true)
-  if (response.data) fileDownload(response.data, 'users.pdf')
+  try {
+    let url = '/v1/user/user/pdf'
+    if (id) url += `?role_id=${id}`
+    const response = await api.postData(url, null, true)
+    if (response.data) {
+      fileDownload(response.data, 'users.pdf')
+      toast.success('Список пользователей успешно скачан')
+    }
+  } catch (error: any) {
+    toast.error('Ошибка при скачивании списка пользователей')
+    console.error('Error:', error)
+  }
 }
 
 const getFilterSearch = () => {
