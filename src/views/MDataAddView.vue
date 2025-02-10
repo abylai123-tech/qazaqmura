@@ -184,6 +184,42 @@ const newItem: Ref<{
   itemType: null
 })
 
+const distribution = ref('')
+const rightsholder = ref('')
+const manufacturer = ref('')
+const manufactureDate = ref('')
+const recordMarker = ref('')
+const descriptionLevel = ref('')
+
+const manufacturerAddress = ref({
+  country: '',
+  city: '',
+  postIndex: '',
+  street: '',
+  houseNumber: '',
+  company: ''
+})
+
+const materialSpec = ref({
+  size: '',
+  accompanyingMaterial: '',
+  otherPhysicalDetails: ''
+})
+
+const seriesInfo = ref({
+  mainTitle: '',
+  parallelTitle: '',
+  titleInfo: '',
+  issueNumber: '',
+  responsibilityFirst: '',
+  responsibilityNext: '',
+  issn: ''
+})
+
+const showAddressBlock = ref(false)
+const showMaterialBlock = ref(false)
+const showSeriesBlock = ref(false)
+
 async function getAuthors(search = null) {
   try {
     let request = `/v1/author`
@@ -612,6 +648,53 @@ async function sendBookData() {
   if (udk.value) {
     body.udk_id = udk.value[udk.value.length - 1].id
   }
+
+  body.distribution = distribution.value
+  body.copyright_holder = distribution.value === 'Правообладатель' ? rightsholder.value : null
+  body.creator_name = manufacturer.value
+  body.creation_date = manufactureDate.value
+  body.marker_id = recordMarker.value
+  body.type_description_id =
+    descriptionLevel.value === 'Уровень 1'
+      ? 1
+      : descriptionLevel.value === 'Уровень 2'
+        ? 2
+        : descriptionLevel.value === 'Уровень 3'
+          ? 3
+          : null
+
+  if (showMaterialBlock.value) {
+    body.book_specials = {
+      sizes: materialSpec.value.size,
+      material_info: materialSpec.value.accompanyingMaterial,
+      additional_info: materialSpec.value.otherPhysicalDetails
+    }
+  }
+
+  if (showSeriesBlock.value) {
+    body.book_areas = {
+      heading_id: seriesInfo.value.mainTitle,
+      additional_heading_id: seriesInfo.value.parallelTitle,
+      additional_info: seriesInfo.value.titleInfo,
+      responsibility_info: seriesInfo.value.issueNumber,
+      first_info: seriesInfo.value.responsibilityFirst,
+      next_info: seriesInfo.value.responsibilityNext,
+      ISSN: seriesInfo.value.issn,
+      number: seriesInfo.value.issueNumber
+    }
+  }
+
+  if (showAddressBlock.value) {
+    body.book_addresses = {
+      country_id: manufacturerAddress.value.country,
+      city_id: manufacturerAddress.value.city,
+      postal_index: manufacturerAddress.value.postIndex,
+      number: manufacturerAddress.value.houseNumber,
+      company_name: manufacturerAddress.value.company,
+      street_name: manufacturerAddress.value.street
+    }
+  }
+
   try {
     const response = await api.postData<Form, { id: number }>('/v1/book', body)
     const id = response.data.id
@@ -1347,6 +1430,158 @@ getContentTypes()
                     placeholder="URL"
                     variant="outlined"
                   ></v-text-field>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col cols="12">
+                  <div class="text-h6 mb-4">Дополнительные параметры</div>
+
+                  <v-select
+                    v-model="distribution"
+                    label="Распространение"
+                    :items="['Общественное достояние', 'Правообладатель']"
+                    variant="outlined"
+                  ></v-select>
+
+                  <v-text-field
+                    v-if="distribution === 'Правообладатель'"
+                    v-model="rightsholder"
+                    label="Правообладатель"
+                    variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model="manufacturer"
+                    label="Название изготовителя"
+                    variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model="manufactureDate"
+                    label="Дата изготовления"
+                    type="date"
+                    variant="outlined"
+                  ></v-text-field>
+
+                  <v-text-field
+                    v-model="recordMarker"
+                    label="Маркер записи и поля данных"
+                    variant="outlined"
+                  ></v-text-field>
+
+                  <v-select
+                    v-model="descriptionLevel"
+                    label="Уровень описания"
+                    :items="['Уровень 1', 'Уровень 2', 'Уровень 3']"
+                    variant="outlined"
+                  ></v-select>
+
+                  <v-divider class="my-4"></v-divider>
+
+                  <v-checkbox v-model="showAddressBlock" label="Адрес изготовления"></v-checkbox>
+
+                  <v-expand-transition>
+                    <div v-if="showAddressBlock">
+                      <v-text-field
+                        v-model="manufacturerAddress.country"
+                        label="Страна"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="manufacturerAddress.city"
+                        label="Город"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="manufacturerAddress.postIndex"
+                        label="Почтовый индекс"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="manufacturerAddress.street"
+                        label="Улица"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="manufacturerAddress.houseNumber"
+                        label="Номер дома"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="manufacturerAddress.company"
+                        label="Компания"
+                        variant="outlined"
+                      ></v-text-field>
+                    </div>
+                  </v-expand-transition>
+
+                  <v-checkbox
+                    v-model="showMaterialBlock"
+                    label="Обозначение специфического вида материала и физические характеристики"
+                  ></v-checkbox>
+
+                  <v-expand-transition>
+                    <div v-if="showMaterialBlock">
+                      <v-text-field
+                        v-model="materialSpec.size"
+                        label="Размер"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="materialSpec.accompanyingMaterial"
+                        label="Сведения о сопроводительном материале"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-textarea
+                        v-model="materialSpec.otherPhysicalDetails"
+                        label="Другие сведения о физической характеристике"
+                        variant="outlined"
+                      ></v-textarea>
+                    </div>
+                  </v-expand-transition>
+
+                  <v-checkbox v-model="showSeriesBlock" label="Область серии"></v-checkbox>
+
+                  <v-expand-transition>
+                    <div v-if="showSeriesBlock">
+                      <v-text-field
+                        v-model="seriesInfo.mainTitle"
+                        label="Основное заглавие серии или подсерии"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="seriesInfo.parallelTitle"
+                        label="Параллельное заглавие серии или подсерии"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="seriesInfo.titleInfo"
+                        label="Сведения, относящиеся к заглавию серии или подсерии"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="seriesInfo.issueNumber"
+                        label="Номер выпуска серии или подсерии"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="seriesInfo.responsibilityFirst"
+                        label="Первые сведения"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="seriesInfo.responsibilityNext"
+                        label="Последующие сведения"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="seriesInfo.issn"
+                        label="Международный стандартный номер сериального издания (ISSN)"
+                        variant="outlined"
+                      ></v-text-field>
+                    </div>
+                  </v-expand-transition>
                 </v-col>
               </v-row>
             </v-container>

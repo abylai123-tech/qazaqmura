@@ -22,6 +22,13 @@ interface User {
   activated_at: string
   last_used_at: string
   status: boolean
+  roles: { id: number; title: string }[]
+  user_id: number
+  classroom?: string
+  subscription?: {
+    request: string
+    return: string
+  }
 }
 
 interface RequestBody {
