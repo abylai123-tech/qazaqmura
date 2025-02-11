@@ -3,7 +3,10 @@ import { useAPI } from '@/api'
 import { ref, type Ref, watch } from 'vue'
 import HelpButton from '@/components/HelpButton.vue'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
+const toast = useToastStore()
+
 interface Book {
   id: number
   volume: string | null
@@ -81,7 +84,9 @@ async function getApplies() {
       loading.value = false
     }
   } catch (error: any) {
-    console.error('Error:', error.message)
+    let errorMessage = error?.message || 'Ошибка при загрузке заявок'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
@@ -105,9 +110,9 @@ watch(page, () => {
     <v-app-bar>
       <template v-slot:title>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">{{t('book_requests')}}</span>
+          <span class="text-h6 font-weight-bold">{{ t('book_requests') }}</span>
           <span class="text-subtitle-2 text-medium-emphasis"
-            >{{t('requests_for_books_from_readers')}}
+            >{{ t('requests_for_books_from_readers') }}
           </span>
         </div>
       </template>

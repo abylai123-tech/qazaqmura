@@ -7,10 +7,12 @@ import returned from '@/assets/return.svg'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '@/auth'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const api = useAPI()
 const route = useRoute()
 const auth = useAuth()
+const toast = useToastStore()
 
 const show1 = ref(false)
 const show2 = ref(false)
@@ -25,7 +27,7 @@ const passwordForm: Ref<{
   new_password: '',
   new_password_confirmation: ''
 })
-const subscriptionStatus = ref(1);
+const subscriptionStatus = ref(1)
 const showAdditionalData2 = ref(false)
 
 interface UserInfo {
@@ -47,12 +49,18 @@ interface UserInfo {
 }
 
 const changePassword = async (isActive: Ref<boolean>) => {
-  const response = await api.patchData('/v1/user/password/change', passwordForm.value)
-  isActive.value = false
-  passwordForm.value = {
-    old_password: '',
-    new_password: '',
-    new_password_confirmation: ''
+  try {
+    const response = await api.patchData('/v1/user/password/change', passwordForm.value)
+    isActive.value = false
+    passwordForm.value = {
+      old_password: '',
+      new_password: '',
+      new_password_confirmation: ''
+    }
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при смене пароля'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
@@ -161,8 +169,10 @@ async function getUser() {
   try {
     const response = await api.fetchData<UserInfo>(`/v1/user/${route.params.id}`)
     userInfo.value = response.data
-  } catch (error) {
-    console.log('Error:', error)
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при загрузке данных пользователя'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
@@ -177,11 +187,11 @@ const requestAmount = ref(0)
 const quarter = ref(null)
 const userRelative: Ref<{ id: number; title: string }[]> = ref([])
 const roles: Ref<{ id: number; title: string }[]> = ref([])
-const isCollege = ref(false);
+const isCollege = ref(false)
 watch(auth.userData, (value) => {
-  console.log('User Data:', value);
+  console.log('User Data:', value)
   if (value && value.school.organization && value.school.organization.id === 3) {
-    isCollege.value = true;
+    isCollege.value = true
   }
 })
 async function getRelatives() {
@@ -243,7 +253,7 @@ const createRequest = async () => {
         return_date: formatDate(returnDate.value)
       }
     }
-    requestBody.status = subscriptionStatus.value;
+    requestBody.status = subscriptionStatus.value
 
     const response = await api.postData('/v1/subscription/request', requestBody)
 
@@ -328,7 +338,7 @@ const inventoryNumbers = computed(() => {
       inventoryNumber.push(inv)
     })
   })
-  return inventoryNumber;
+  return inventoryNumber
 })
 
 const activateReturn = (id: number) => {
@@ -366,10 +376,8 @@ const downloadCard = async () => {
   }
 }
 
-
-
-const inventoryMode = ref(1);
-const selectedInventoryNumber = ref(null);
+const inventoryMode = ref(1)
+const selectedInventoryNumber = ref(null)
 
 getUser()
 getRoles()
@@ -384,7 +392,7 @@ getBookStates()
   <v-container fluid>
     <v-navigation-drawer v-model="requestDrawer" location="right" temporary width="600">
       <v-list-item>
-        <span class="font-weight-bold">{{t('issue_of_book')}}</span>
+        <span class="font-weight-bold">{{ t('issue_of_book') }}</span>
       </v-list-item>
       <v-divider></v-divider>
       <v-list-item>
@@ -449,7 +457,7 @@ getBookStates()
           color="primary"
           variant="text"
           @click="showAdditionalData = !showAdditionalData"
-          >{{t('extended_data')}}
+          >{{ t('extended_data') }}
         </v-btn>
       </v-list-item>
       <v-list-item v-if="showAdditionalData">
@@ -480,7 +488,7 @@ getBookStates()
         ></v-text-field>
       </v-list-item>
       <v-list-item class="mt-3">
-        <v-btn class="mr-3" variant="tonal" @click="requestDrawer = false">{{t('close')}}</v-btn>
+        <v-btn class="mr-3" variant="tonal" @click="requestDrawer = false">{{ t('close') }}</v-btn>
         <v-btn color="primary" variant="flat" @click="createRequest">Выдача</v-btn>
       </v-list-item>
     </v-navigation-drawer>
@@ -547,7 +555,7 @@ getBookStates()
         ></v-textarea>
       </v-list-item>
       <v-list-item>
-        <v-btn variant="tonal" @click="returnDrawer = false">{{t('close')}}</v-btn>
+        <v-btn variant="tonal" @click="returnDrawer = false">{{ t('close') }}</v-btn>
         <v-btn class="ml-2" color="primary" variant="flat" @click="makeReturn">Возврат</v-btn>
       </v-list-item>
     </v-navigation-drawer>
@@ -558,7 +566,7 @@ getBookStates()
       </v-list-item>
       <v-divider></v-divider>
       <v-list-item class="my-2">
-        <span class="font-weight-bold">{{t('basic')}}</span>
+        <span class="font-weight-bold">{{ t('basic') }}</span>
       </v-list-item>
 
       <v-list-item>
@@ -656,16 +664,23 @@ getBookStates()
       </v-list-item>
 
       <v-list-item v-if="addStructure">
-        <div class="font-weight-bold">{{t('structure')}}</div>
+        <div class="font-weight-bold">{{ t('structure') }}</div>
         <div class="d-flex">
-          <v-text-field :label="isCollege ? 'Курс' : 'Цифра класса'" variant="outlined"></v-text-field>
-          <v-text-field class="ml-4" :label="isCollege ? 'Кафедра' : 'Буква класса'" variant="outlined"></v-text-field>
+          <v-text-field
+            :label="isCollege ? 'Курс' : 'Цифра класса'"
+            variant="outlined"
+          ></v-text-field>
+          <v-text-field
+            class="ml-4"
+            :label="isCollege ? 'Кафедра' : 'Буква класса'"
+            variant="outlined"
+          ></v-text-field>
         </div>
       </v-list-item>
 
       <v-list-item class="mt-2 mb-6 text-center">
-        <v-btn class="mr-10" variant="tonal" @click="editDrawer = false">{{t('close')}}</v-btn>
-        <v-btn color="primary" variant="flat" @click="sendUpdate">{{t('add')}}</v-btn>
+        <v-btn class="mr-10" variant="tonal" @click="editDrawer = false">{{ t('close') }}</v-btn>
+        <v-btn color="primary" variant="flat" @click="sendUpdate">{{ t('add') }}</v-btn>
       </v-list-item>
     </v-navigation-drawer>
     <v-app-bar>
@@ -675,7 +690,7 @@ getBookStates()
       <v-spacer></v-spacer>
       <v-btn class="mr-3" variant="tonal" @click="downloadFile">Скачать формуляр</v-btn>
       <v-btn class="mr-3" color="primary" variant="flat" @click="requestDrawer = true"
-        >{{t('issue_book')}}
+        >{{ t('issue_book') }}
       </v-btn>
       <help-button></help-button>
     </v-app-bar>
@@ -692,7 +707,7 @@ getBookStates()
                     {{ userInfo?.user_data.fathername }}
                   </div>
                   <div>
-                    <strong>{{t('iin')}}:</strong>
+                    <strong>{{ t('iin') }}:</strong>
                     {{ showDocument ? userInfo?.user_data.document_ID : documentHidden }}
                     <v-icon
                       :icon="showDocument ? 'mdi-eye-off-outline' : 'mdi-eye-outline'"
@@ -700,40 +715,40 @@ getBookStates()
                     ></v-icon>
                   </div>
                   <div>
-                    <v-chip color="green" variant="flat">{{t('active')}}</v-chip>
+                    <v-chip color="green" variant="flat">{{ t('active') }}</v-chip>
                   </div>
-                  <div class="mt-4">{{t('issued')}}: 1</div>
-                  <div>{{t('returned')}}: 1</div>
+                  <div class="mt-4">{{ t('issued') }}: 1</div>
+                  <div>{{ t('returned') }}: 1</div>
                 </v-col>
                 <v-divider vertical></v-divider>
                 <v-col cols="9">
                   <div>
-                    {{t('institution')}}:
+                    {{ t('institution') }}:
                     <strong>{{ userInfo?.school?.name }}</strong>
                   </div>
                   <v-divider class="my-2"></v-divider>
                   <v-row>
                     <v-col cols="3">
                       <div>
-                        {{t('date_of_birth')}}:<br />
+                        {{ t('date_of_birth') }}:<br />
                         <strong>{{ userInfo?.user_data.birthday }}</strong>
                       </div>
                     </v-col>
                     <v-col cols="3">
                       <div>
-                        {{t('mail')}}:<br />
+                        {{ t('mail') }}:<br />
                         <strong>{{ userInfo?.email }}</strong>
                       </div>
                     </v-col>
                     <v-col cols="3">
                       <div>
-                        {{t('phone_number')}}:<br />
+                        {{ t('phone_number') }}:<br />
                         <strong>{{ userInfo?.user_data.phone }}</strong>
                       </div>
                     </v-col>
                     <v-col cols="3">
                       <div>
-                        {{t('gender')}}:<br />
+                        {{ t('gender') }}:<br />
                         <strong v-if="userInfo?.user_data.sex && userInfo?.user_data.sex === 1"
                           >Мужской</strong
                         >
@@ -745,7 +760,7 @@ getBookStates()
                   <v-row>
                     <v-col cols="3">
                       <div>
-                        {{t('role')}}:<br />
+                        {{ t('role') }}:<br />
                         <strong>{{ userInfo?.roles.map((obj) => obj.label).join(', ') }}</strong>
                       </div>
                     </v-col>
@@ -762,7 +777,7 @@ getBookStates()
                         variant="text"
                         @click="downloadCard"
                       >
-                        {{t('download_access_card')}}
+                        {{ t('download_access_card') }}
                       </v-btn>
                       <span>03.05.2024</span>
                     </v-col>
@@ -773,7 +788,7 @@ getBookStates()
                       <v-dialog max-width="500">
                         <template v-slot:activator="{ props }">
                           <v-btn append-icon="mdi-arrow-right" v-bind="props" variant="outlined"
-                            >{{t('change_password')}}
+                            >{{ t('change_password') }}
                           </v-btn>
                         </template>
 
@@ -781,7 +796,7 @@ getBookStates()
                           <v-card>
                             <v-card-title>
                               <div class="d-flex justify-space-between">
-                                <span class="font-weight-bold">{{t('change_password')}}</span>
+                                <span class="font-weight-bold">{{ t('change_password') }}</span>
                                 <v-btn
                                   icon="mdi-close"
                                   variant="text"
@@ -818,12 +833,14 @@ getBookStates()
                             </v-card-text>
 
                             <v-card-actions class="pl-6 pb-4">
-                              <v-btn variant="tonal" @click="isActive.value = false">{{t('close')}}</v-btn>
+                              <v-btn variant="tonal" @click="isActive.value = false">{{
+                                t('close')
+                              }}</v-btn>
                               <v-btn
                                 color="primary"
                                 variant="flat"
                                 @click="changePassword(isActive)"
-                                >{{t('edit')}}
+                                >{{ t('edit') }}
                               </v-btn>
                             </v-card-actions>
                           </v-card>
@@ -835,7 +852,7 @@ getBookStates()
                         append-icon="mdi-arrow-right"
                         variant="outlined"
                         @click="editDrawer = true"
-                        >{{t('edit_data')}}
+                        >{{ t('edit_data') }}
                       </v-btn>
                     </v-col>
                     <v-col cols="4">
@@ -846,14 +863,14 @@ getBookStates()
                             append-icon="mdi-arrow-right"
                             v-bind="props"
                             variant="outlined"
-                            >{{t('disable_user')}}
+                            >{{ t('disable_user') }}
                           </v-btn>
                           <v-btn
                             v-if="userInfo && !userInfo.status"
                             append-icon="mdi-arrow-right"
                             v-bind="props"
                             variant="outlined"
-                            >{{t('activate_user')}}
+                            >{{ t('activate_user') }}
                           </v-btn>
                         </template>
 
@@ -873,11 +890,15 @@ getBookStates()
                               </v-row>
                               <v-row>
                                 <v-col class="text-center" cols="12">
-                                  <span v-if="userInfo && userInfo.status" class="font-weight-bold"
-                                    >{{t('disable_user')}}</span
+                                  <span
+                                    v-if="userInfo && userInfo.status"
+                                    class="font-weight-bold"
+                                    >{{ t('disable_user') }}</span
                                   >
-                                  <span v-if="userInfo && !userInfo.status" class="font-weight-bold"
-                                    >{{t('activate_user')}}</span
+                                  <span
+                                    v-if="userInfo && !userInfo.status"
+                                    class="font-weight-bold"
+                                    >{{ t('activate_user') }}</span
                                   >
                                 </v-col>
                               </v-row>
@@ -930,7 +951,9 @@ getBookStates()
         <v-data-table :headers="headers" :items="subscription">
           <template v-slot:[`item.name`]="{ item }">
             <div class="mt-2">{{ item.book.title }}</div>
-            <div class="text-medium-emphasis mt-2">{{t('year_of_publication')}}: {{ item.book.year }}</div>
+            <div class="text-medium-emphasis mt-2">
+              {{ t('year_of_publication') }}: {{ item.book.year }}
+            </div>
             <div class="my-2">
               <v-chip
                 v-for="author in item.book.book_author_main"
@@ -947,22 +970,24 @@ getBookStates()
                 color="green"
                 variant="flat"
               >
-                {{t('publisher')}}: {{ publisher.title }}
+                {{ t('publisher') }}: {{ publisher.title }}
               </v-chip>
             </div>
           </template>
           <template v-slot:[`item.activity`]="{ item }">
             <div class="mb-2">
               <v-chip v-if="item.status === 'return'" color="primary" variant="outlined"
-                >{{  t('returned') }}
+                >{{ t('returned') }}
               </v-chip>
-              <v-chip v-if="item.status === 'request'" color="primary" variant="outlined"
-                >  На выдаче 
+              <v-chip v-if="item.status === 'request'" color="primary" variant="outlined">
+                На выдаче
               </v-chip>
-              <v-chip color="primary" variant="outlined" v-if="item.status === 'reader'">Читательский зал</v-chip>
+              <v-chip color="primary" variant="outlined" v-if="item.status === 'reader'"
+                >Читательский зал</v-chip
+              >
             </div>
-            <div>{{t('issue_date')}}: {{ item.created_at }}</div>
-            <div>{{t('return_date')}}: {{ item.return_date }}</div>
+            <div>{{ t('issue_date') }}: {{ item.created_at }}</div>
+            <div>{{ t('return_date') }}: {{ item.return_date }}</div>
             <div v-if="item.status == 'return'">Дата возврата в фонд: {{ item.returned_at }}</div>
           </template>
           <template v-slot:[`item.actions`]="{ item }">
@@ -1005,10 +1030,10 @@ getBookStates()
 
                     <v-card-actions class="pb-4">
                       <v-btn class="ml-4 mr-2" variant="tonal" @click="isActive.value = false"
-                        >{{t('close')}}
+                        >{{ t('close') }}
                       </v-btn>
                       <v-btn color="primary" variant="flat" @click="changeDate(item.id)"
-                        >{{t('edit')}}
+                        >{{ t('edit') }}
                       </v-btn>
                     </v-card-actions>
                   </v-card>

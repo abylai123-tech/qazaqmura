@@ -6,9 +6,13 @@ import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import { useI18n } from 'vue-i18n'
 import { useToastStore } from '@/stores/toast'
+import { useRouter } from 'vue-router'
+import { useBookStore } from '@/stores/book'
 const { t } = useI18n()
 const api = useAPI()
 const toast = useToastStore()
+const router = useRouter()
+const bookStore = useBookStore()
 
 interface Book {
   id: number
@@ -42,6 +46,35 @@ interface Book {
   book_age_characteristic: any[]
   book_education_level: any[]
   book_country: any[]
+  distribution?: string
+  copyright_holder?: string
+  creator_name?: string
+  creation_date?: string
+  marker_id?: string
+  type_description_id?: string
+  book_specials?: {
+    sizes?: string
+    material_info?: string
+    additional_info?: string
+  }
+  book_areas?: {
+    heading_id?: number
+    additional_heading_id?: number
+    additional_info?: string
+    responsibility_info?: string
+    first_info?: string
+    next_info?: string
+    ISSN?: string
+    number?: string
+  }
+  book_addresses?: {
+    country_id?: number
+    city_id?: number
+    postal_index?: string
+    number?: string
+    company_name?: string
+    street_name?: string
+  }
 }
 
 interface Contractor {
@@ -167,7 +200,6 @@ function goToPage() {
 
 async function getBooks() {
   loading.value = true
-  console.log(epub.value)
   try {
     let requestString = `/v1/book?page=${page.value}`
     if (search.value) {
@@ -213,8 +245,6 @@ async function getBooks() {
       requestString += `&sort=${sorting.value}`
     }
 
-    console.log(requestString)
-
     const response = await api.fetchData<{ data: { items: Book[] }; meta: { last_page: number } }>(
       requestString
     )
@@ -225,8 +255,9 @@ async function getBooks() {
       booksTotal.value = response.data.meta.total
     }
   } catch (error: any) {
-    toast.error('Ошибка при загрузке списка книг')
-    console.error('Error:', error.message)
+    let errorMessage = error?.message || 'Ошибка при загрузке книг'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   } finally {
     loading.value = false
   }
@@ -545,8 +576,10 @@ async function addNewItem(
   }
   try {
     await api.postData(`/v1/${request}`, requestBody)
-  } catch (e) {
-    console.error('Error:', e)
+  } catch (error: any) {
+    let errorMessage = error.response?.data?.message || 'Ошибка при добавлении записи'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
   isActive.value = false
 }
@@ -576,6 +609,75 @@ const newQuote = ref({
   page: '',
   note: ''
 })
+
+function handleAddToFund(option: number, item: Book) {
+  if (option === 2) {
+    bookStore.setBookData({
+      title: item.title,
+      title2: item.title2,
+      annotation: item.annotation,
+      pages: item.pages,
+      year: item.year,
+      author_id_main: item.book_author_main?.[0]?.id,
+      author_id: item.book_author?.map((a) => a.id),
+      publisher_id: item.book_publisher?.[0]?.id,
+      language_id: item.book_language?.map((l) => l.id),
+      type_id: item.book_type?.[0]?.id,
+      ISBN: item.ISBN,
+      genre_id: item.book_genre?.map((g) => g.id),
+      country_id: item.book_country?.[0]?.id,
+      copyright_sign_id: item.book_copyright_sign?.[0]?.id,
+      age_characteristic_id: item.book_age_characteristic?.[0]?.id,
+      book_classroom: item.book_classroom,
+      city_id: item.city_id,
+      parent_id: item.id
+    })
+    router.push('/fund/add')
+  }
+}
+
+const addToFund = (item: Book) => {
+  bookStore.setBookData({
+    title: item.title,
+    title2: item.title2 || '',
+    ISBN: item.ISBN,
+    year: item.year,
+    pages: item.pages,
+    annotation: item.annotation,
+    quotes: item.quotes || '',
+    author_id: item.book_author?.map((author) => author.id) || [],
+    author_id_main: item.book_author_main?.map((author) => author.id) || [],
+    publisher_id: item.book_publisher?.[0]?.id || null,
+    language_id: item.book_language?.map((lang) => lang.id) || [],
+    city_id: item.city_id || null,
+    type_id: item.book_type?.[0]?.id || null,
+    genre_id: item.book_genre?.map((genre) => genre.id) || [],
+    book_classroom: item.book_classroom || null,
+    book_classroom_language_id: item.book_classroom_language || null,
+    country_id: item.book_country?.[0]?.id || null,
+    content_type_id: item.content_type_id || null,
+    age_characteristic_id: item.book_age_characteristic?.[0]?.id || null,
+    binding_id: item.binding_id || null,
+    education_level_id: item.book_education_level?.[0]?.id || null,
+    volume: item.volume || null,
+    part: item.part || null,
+    materials: item.materials || [],
+    bbk_id: item.book_bbk?.[0]?.id || null,
+    udk_id: item.book_udk?.[0]?.id || null,
+    copyright_sign_id: item.book_copyright_sign?.[0]?.id || null,
+    distribution: item.distribution || '',
+    copyright_holder: item.copyright_holder || '',
+    creator_name: item.creator_name || '',
+    creation_date: item.creation_date || '',
+    marker_id: item.marker_id || '',
+    type_description_id: item.type_description_id || '',
+    book_specials: item.book_specials || {},
+    book_areas: item.book_areas || {},
+    book_addresses: item.book_addresses || {}
+  })
+
+  router.push('/fund/add')
+}
 
 getBooks()
 getAdmissions()
@@ -724,12 +826,12 @@ watch(page, (newValue) => {
                   </v-row>
                   <v-row class="mt-4">
                     <v-chip
-                      v-for="item in selectedItem.book_author_main"
-                      :key="item.id"
+                      v-for="author in selectedItem.book_author_main"
+                      :key="author.id"
                       color="primary"
                       variant="outlined"
                     >
-                      {{ item.name }}
+                      {{ author.name }}
                     </v-chip>
                   </v-row>
                   <v-row class="mt-4">
@@ -1643,203 +1745,284 @@ watch(page, (newValue) => {
                         </v-menu>
                       </v-col>
                       <v-col cols="4">
-                        <v-dialog
+                        <v-menu
                           v-if="
                             auth.user.value && auth.user.value.roles.some((obj) => obj.id !== 1)
                           "
-                          max-width="800"
                         >
                           <template v-slot:activator="{ props }">
-                            <v-btn color="green" size="small" v-bind="props" variant="flat"
-                              >{{ t('add_to_fund') }}
+                            <v-btn color="green" size="small" v-bind="props" variant="flat">
+                              {{ t('add_to_fund') }}
                             </v-btn>
                           </template>
 
-                          <template v-slot:default="{ isActive }">
-                            <v-card>
-                              <v-card-title>{{ t('add_to_fund') }}</v-card-title>
-                              <v-card-text>
-                                <v-container fluid>
-                                  <v-row>
-                                    <v-col cols="4">
-                                      <v-img
-                                        :src="
-                                          item.book_cover
-                                            ? `/storage/covers/${item.book_cover.storage}`
-                                            : nocover
-                                        "
-                                        class="rounded"
-                                        fluid
-                                      ></v-img>
-                                    </v-col>
-                                    <v-col cols="6">
-                                      <div class="text-h6 font-weight-bold">
-                                        {{ item.title }}
-                                      </div>
-                                      <div class="mt-3">
-                                        <v-chip
-                                          v-for="author in item.book_author_main"
-                                          :key="author.id"
-                                          color="primary"
-                                          variant="outlined"
-                                          >{{ author.name }}
-                                        </v-chip>
-                                      </div>
-                                      <v-row class="mt-2">
-                                        <v-col>
-                                          <div>
-                                            <strong>{{ t('language') }}:</strong>
-                                          </div>
-                                          <div>
-                                            {{
-                                              item.book_language
-                                                ? item.book_language
-                                                    .map((obj) => obj.title)
-                                                    .join(', ')
-                                                : ''
-                                            }}
-                                          </div>
+                          <v-list>
+                            <v-dialog width="800">
+                              <template v-slot:activator="{ props }">
+                                <v-list-item
+                                  v-bind="props"
+                                  @click="addToFund(item)"
+                                  class="cursor-pointer"
+                                  hover
+                                >
+                                  <v-list-item-title
+                                    >Добавить без редактирования записи</v-list-item-title
+                                  >
+                                </v-list-item>
+                                <v-list-item class="cursor-pointer" hover @click="addToFund(item)">
+                                  <v-list-item-title
+                                    >Добавить запись с редактированием</v-list-item-title
+                                  >
+                                </v-list-item>
+                              </template>
+
+                              <template v-slot:default="{ isActive }">
+                                <v-card class="pa-3">
+                                  <v-card-title>{{ t('add_to_fund') }}</v-card-title>
+                                  <v-card-text>
+                                    <v-container fluid>
+                                      <v-row>
+                                        <v-col cols="4">
+                                          <v-img
+                                            height="200"
+                                            :src="
+                                              item.book_cover
+                                                ? `/storage/covers/${item.book_cover.storage}`
+                                                : nocover
+                                            "
+                                            class="rounded"
+                                            fluid
+                                          ></v-img>
                                         </v-col>
-                                        <v-col>
-                                          <div>
-                                            <strong>{{ t('year_of_publication') }}:</strong>
+                                        <v-col cols="6">
+                                          <div class="text-h6 font-weight-bold">
+                                            {{ item.title }}
                                           </div>
-                                          <div>{{ item.year }}</div>
+                                          <div class="mt-3">
+                                            <v-chip
+                                              v-for="author in item.book_author_main"
+                                              :key="author.id"
+                                              color="primary"
+                                              variant="outlined"
+                                            >
+                                              {{ author.name }}
+                                            </v-chip>
+                                          </div>
+                                          <v-row class="mt-2">
+                                            <v-col>
+                                              <div>
+                                                <strong>{{ t('language') }}:</strong>
+                                              </div>
+                                              <div>
+                                                {{
+                                                  item.book_language
+                                                    ? item.book_language
+                                                        .map((obj) => obj.title)
+                                                        .join(', ')
+                                                    : ''
+                                                }}
+                                              </div>
+                                            </v-col>
+                                            <v-col>
+                                              <div>
+                                                <strong>{{ t('year_of_publication') }}:</strong>
+                                              </div>
+                                              <div>{{ item.year }}</div>
+                                            </v-col>
+                                          </v-row>
+                                          <v-row>
+                                            <v-col>
+                                              <div>
+                                                <strong>{{ t('publisher') }}:</strong>
+                                              </div>
+                                              <div>
+                                                {{
+                                                  item.book_publisher
+                                                    ? item.book_publisher
+                                                        .map((obj) => obj.title)
+                                                        .join(', ')
+                                                    : ''
+                                                }}
+                                              </div>
+                                            </v-col>
+                                            <v-col>
+                                              <div><strong>ББК:</strong></div>
+                                              <div>
+                                                {{
+                                                  item.book_bbk
+                                                    ? item.book_bbk
+                                                        .map((obj) => obj.title)
+                                                        .join(', ')
+                                                    : ''
+                                                }}
+                                              </div>
+                                            </v-col>
+                                          </v-row>
                                         </v-col>
                                       </v-row>
                                       <v-row>
                                         <v-col>
-                                          <div>
-                                            <strong>{{ t('publisher') }}:</strong>
-                                          </div>
-                                          <div>
-                                            {{
-                                              item.book_publisher
-                                                ? item.book_publisher
-                                                    .map((obj) => obj.title)
-                                                    .join(', ')
-                                                : ''
-                                            }}
-                                          </div>
+                                          <v-autocomplete
+                                            v-model="admission.book_admission_id"
+                                            :items="admissions"
+                                            item-value="id"
+                                            :label="t('reception')"
+                                            placeholder="Выберите"
+                                            variant="outlined"
+                                          ></v-autocomplete>
                                         </v-col>
                                         <v-col>
-                                          <div><strong>ББК:</strong></div>
-                                          <div>
-                                            {{
-                                              item.book_bbk
-                                                ? item.book_bbk.map((obj) => obj.title).join(', ')
-                                                : ''
-                                            }}
-                                          </div>
+                                          <v-text-field
+                                            v-model="admissionDate"
+                                            label="Дата поступления"
+                                            type="text"
+                                            variant="outlined"
+                                            @input="handleDate"
+                                          ></v-text-field>
                                         </v-col>
                                       </v-row>
-                                    </v-col>
-                                  </v-row>
-                                  <v-row>
-                                    <v-col>
-                                      <v-autocomplete
-                                        v-model="admission.book_admission_id"
-                                        :items="admissions"
-                                        item-value="id"
-                                        :label="t('reception')"
-                                        placeholder="Выберите"
-                                        variant="outlined"
-                                      ></v-autocomplete>
-                                    </v-col>
-                                    <v-col>
-                                      <v-text-field
-                                        v-model="admissionDate"
-                                        label="Дата поступления"
-                                        type="text"
-                                        variant="outlined"
-                                        @input="handleDate"
-                                      ></v-text-field>
-                                    </v-col>
-                                  </v-row>
 
-                                  <v-row>
-                                    <v-col>
-                                      <v-autocomplete
-                                        v-model="admission.contractor_id"
-                                        :items="contractors"
-                                        item-value="id"
-                                        :label="t('counterparty')"
-                                        placeholder="Укажите"
-                                        variant="outlined"
-                                        @update:search="getContractors"
-                                      >
-                                        <template v-slot:no-data>
-                                          <div
-                                            class="px-4 d-flex justify-space-between align-center"
+                                      <v-row>
+                                        <v-col>
+                                          <v-autocomplete
+                                            v-model="admission.contractor_id"
+                                            :items="contractors"
+                                            item-value="id"
+                                            :label="t('counterparty')"
+                                            placeholder="Укажите"
+                                            variant="outlined"
+                                            @update:search="getContractors"
                                           >
-                                            <span>Данного контрагента нет в списке</span>
-                                            <v-btn
-                                              color="primary"
-                                              variant="flat"
-                                              @click="setNewItem('contractor')"
-                                              >{{ t('add') }}
-                                            </v-btn>
-                                          </div>
-                                        </template>
-                                      </v-autocomplete>
-                                    </v-col>
-                                  </v-row>
+                                            <template v-slot:no-data>
+                                              <div
+                                                class="px-4 d-flex justify-space-between align-center"
+                                              >
+                                                <span>Данного контрагента нет в списке</span>
+                                                <v-btn
+                                                  color="primary"
+                                                  variant="flat"
+                                                  @click="setNewItem('contractor')"
+                                                  >{{ t('add') }}
+                                                </v-btn>
+                                              </div>
+                                            </template>
+                                          </v-autocomplete>
+                                        </v-col>
+                                      </v-row>
 
-                                  <v-row>
-                                    <v-col>
-                                      <v-text-field
-                                        v-model="admission.amount"
-                                        :label="t('quantity')"
-                                        placeholder="Выберите"
-                                        type="number"
-                                        variant="outlined"
-                                      ></v-text-field>
-                                    </v-col>
-                                    <v-col>
-                                      <v-text-field
-                                        v-model="admission.price"
-                                        :label="t('price')"
-                                        placeholder="0,00"
-                                        step="0.01"
-                                        type="number"
-                                        variant="outlined"
-                                      ></v-text-field>
-                                    </v-col>
-                                  </v-row>
+                                      <v-row>
+                                        <v-col>
+                                          <v-text-field
+                                            v-model="admission.amount"
+                                            :label="t('quantity')"
+                                            placeholder="Выберите"
+                                            type="number"
+                                            variant="outlined"
+                                          ></v-text-field>
+                                        </v-col>
+                                        <v-col>
+                                          <v-text-field
+                                            v-model="admission.price"
+                                            :label="t('price')"
+                                            placeholder="0,00"
+                                            step="0.01"
+                                            type="number"
+                                            variant="outlined"
+                                          ></v-text-field>
+                                        </v-col>
+                                      </v-row>
 
-                                  <v-row>
-                                    <v-col>
-                                      <v-autocomplete
-                                        v-model="admission.book_state_id"
-                                        :items="states"
-                                        item-value="id"
-                                        :label="t('book_condition')"
-                                        placeholder="Выберите"
-                                        variant="outlined"
-                                      ></v-autocomplete>
-                                    </v-col>
-                                  </v-row>
-                                </v-container>
-                              </v-card-text>
+                                      <v-row>
+                                        <v-col>
+                                          <v-autocomplete
+                                            v-model="admission.book_state_id"
+                                            :items="states"
+                                            item-value="id"
+                                            :label="t('book_condition')"
+                                            placeholder="Выберите"
+                                            variant="outlined"
+                                          ></v-autocomplete>
+                                        </v-col>
+                                      </v-row>
+                                    </v-container>
+                                  </v-card-text>
 
-                              <v-card-actions>
+                                  <v-card-actions>
+                                    <v-btn
+                                      class="ml-auto mr-3"
+                                      variant="tonal"
+                                      @click="isActive.value = false"
+                                      >{{ t('cancel') }}
+                                    </v-btn>
+                                    <v-btn
+                                      class="mr-auto"
+                                      color="primary"
+                                      variant="flat"
+                                      @click="sendAdmission(admission, isActive, item.id)"
+                                      >{{ t('send') }}
+                                    </v-btn>
+                                  </v-card-actions>
+                                </v-card>
+                              </template>
+                            </v-dialog>
+
+                            <v-dialog
+                              v-if="
+                                auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1)
+                              "
+                              width="600"
+                            >
+                              <template v-slot:activator="{ props }">
                                 <v-btn
-                                  class="ml-auto mr-3"
-                                  variant="tonal"
-                                  @click="isActive.value = false"
-                                  >{{ t('cancel') }}
-                                </v-btn>
-                                <v-btn
-                                  class="mr-auto"
-                                  color="primary"
+                                  class="mr-3"
+                                  color="red"
+                                  size="small"
+                                  v-bind="props"
                                   variant="flat"
-                                  @click="sendAdmission(admission, isActive, item.id)"
-                                  >{{ t('send') }}
+                                >
+                                  <v-icon icon="mdi-delete"></v-icon>
                                 </v-btn>
-                              </v-card-actions>
-                            </v-card>
-                          </template>
-                        </v-dialog>
+                              </template>
+
+                              <template v-slot:default="{ isActive }">
+                                <v-card
+                                  class="text-center"
+                                  text="Вы уверены что хотите библиографическию запись?"
+                                  title="Удаление"
+                                >
+                                  <v-card-actions>
+                                    <v-btn
+                                      class="ml-auto mr-3"
+                                      color="primary"
+                                      variant="flat"
+                                      @click="deleteItem(item.id, isActive)"
+                                      >{{ t('yes') }}
+                                    </v-btn>
+                                    <v-btn
+                                      class="mr-auto"
+                                      variant="tonal"
+                                      @click="isActive.value = false"
+                                      >Отмена
+                                    </v-btn>
+                                  </v-card-actions>
+                                </v-card>
+                              </template>
+                            </v-dialog>
+
+                            <v-btn
+                              v-if="
+                                auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1)
+                              "
+                              :to="`/m-data/edit/${item.id}`"
+                              class="rounded"
+                              color="green"
+                              size="small"
+                              variant="flat"
+                            >
+                              <v-icon icon="mdi-pencil"></v-icon>
+                            </v-btn>
+                          </v-list>
+                        </v-menu>
 
                         <v-dialog
                           v-if="
@@ -1957,3 +2140,9 @@ watch(page, (newValue) => {
     </v-row>
   </v-container>
 </template>
+
+<style scoped>
+.cursor-pointer {
+  cursor: pointer;
+}
+</style>

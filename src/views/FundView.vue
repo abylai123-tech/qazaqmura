@@ -156,8 +156,9 @@ async function getBooks() {
       length.value = response.data.meta.last_page
     }
   } catch (error: any) {
-    toast.error('Ошибка при загрузке списка книг')
-    console.error('Error:', error.message)
+    let errorMessage = error?.message || 'Ошибка при загрузке фонда'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
@@ -174,10 +175,7 @@ const editData = async (isActive: Ref<boolean>) => {
     toast.success('Данные успешно обновлены')
     isActive.value = false
   } catch (error: any) {
-    let errorMessage = 'Ошибка при обновлении данных'
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    }
+    let errorMessage = error?.message || 'Ошибка при редактировании записи'
     toast.error(errorMessage)
     console.error('Error:', error)
   }
@@ -315,8 +313,6 @@ async function getStates(search = null) {
 }
 
 async function selectItem(item) {
-  console.log(item)
-
   const response = await api.fetchData('/v1/book/school/' + item.book_school_id)
   selectedItem.value.amount = response.data.amount
   selectedItem.value.contractor = response.data.contractor_id
