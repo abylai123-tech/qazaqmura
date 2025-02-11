@@ -1731,7 +1731,7 @@ onUnmounted(() => {
     <v-row>
       <v-col class="text-center">
         <v-btn color="green" prepend-icon="mdi-plus" variant="flat" @click="sendBookData"
-          >Добавить фонд
+          >Добавить в фонд
         </v-btn>
       </v-col>
     </v-row>

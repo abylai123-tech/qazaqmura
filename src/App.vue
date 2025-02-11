@@ -53,6 +53,7 @@ const navigation = computed(() => [
   },
   {
     title: 'Онлайн библиотека',
+    value: 11,
     props: {
       prependIcon: 'mdi-library',
       appendIcon: 'mdi-chevron-right',
