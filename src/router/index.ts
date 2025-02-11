@@ -31,6 +31,7 @@ import UpdateView from '@/views/UpdateView.vue'
 import QuotesView from '@/views/QuotesView.vue'
 import OnlineLibrary from '@/views/OnlineLibrary.vue'
 import ReportsView from '@/views/ReportsView.vue'
+import FundAddViewVue from '@/views/FundAddView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -339,6 +340,12 @@ const router = createRouter({
       path: '/reports',
       name: 'reports',
       component: ReportsView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/fund/add',
+      name: 'fundAdd',
+      component: FundAddViewVue,
       meta: { requiresAuth: true }
     }
   ]

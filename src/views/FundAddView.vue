@@ -1,15 +1,18 @@
 <script lang="ts" setup>
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, type Ref, onUnmounted } from 'vue'
 import { useAPI } from '@/api'
 import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import BkDialog from '@/components/bkDialog.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToastStore } from '@/stores/toast'
+import { useBookStore } from '@/stores/book'
 const { t } = useI18n()
 const api = useAPI()
 const toast = useToastStore()
+const route = useRoute()
+const bookStore = useBookStore()
 
 interface Form {
   author_id: number[] | null
@@ -51,12 +54,12 @@ interface Form {
   qualification_id: number | null
   profession_id: number | null
   specialty_id: number | null
-  type_description_id?: number
-  marker_id?: number
-  creation_date?: string
-  creator_name?: string
-  copyright_holder?: string
-  distribution?: string
+  distribution: string
+  copyright_holder: string
+  creator_name: string
+  creation_date: string
+  marker_id: string
+  type_description_id: string
   book_specials?: {
     sizes?: string
     material_info?: string
@@ -118,8 +121,8 @@ interface Contractor {
 }
 
 const valid: Ref<boolean> = ref(false)
-const showAdditionalData: Ref<boolean> = ref(false)
-const showFundData: Ref<boolean> = ref(false)
+const showAdditionalData: Ref<boolean> = ref(true)
+const showFundData: Ref<boolean> = ref(true)
 const authors: Ref<Author[]> = ref([])
 const publishers: Ref<Publisher[]> = ref([])
 const cities: Ref<Publisher[]> = ref([])
@@ -185,7 +188,16 @@ const form: Ref<Form> = ref({
   volume: null,
   materials: [],
   link: { URL: '', title: '' },
-  subject_heading_id: null
+  subject_heading_id: null,
+  distribution: '',
+  copyright_holder: '',
+  creator_name: '',
+  creation_date: '',
+  marker_id: '',
+  type_description_id: '',
+  book_specials: {},
+  book_areas: {},
+  book_addresses: {}
 })
 const admission: Ref<BookAdmission> = ref({
   amount: 0,
@@ -673,28 +685,6 @@ const router = useRouter()
 
 async function sendBookData() {
   const body = removeNullOrEmptyFields(form.value)
-
-  if (showMaterialSpecs.value) {
-    body.book_specials = removeNullOrEmptyFields(form.value.book_specials)
-  }
-
-  if (showManufacturerAddress.value) {
-    body.book_addresses = removeNullOrEmptyFields(form.value.book_addresses)
-  }
-
-  if (showSeriesArea.value) {
-    body.book_areas = {
-      heading_id: seriesArea.value.mainTitle ? 1 : undefined,
-      additional_info: seriesArea.value.titleInfo,
-      responsibility_info: seriesArea.value.responsibilityInfo.first,
-      first_info: seriesArea.value.responsibilityInfo.first,
-      next_info: seriesArea.value.responsibilityInfo.subsequent,
-      ISSN: seriesArea.value.issn,
-      number: seriesArea.value.issueNumber
-    }
-    body.book_areas = removeNullOrEmptyFields(body.book_areas)
-  }
-
   body.author_id_main = [body.author_id_main]
   if (body.materials) body.materials = [body.materials]
   if (bbk.value) {
@@ -714,9 +704,9 @@ async function sendBookData() {
     toast.success('Запись успешно добавлена')
     router.push('/m-data')
   } catch (error: any) {
-    let errorMessage = error.message || 'Произошла ошибка при добавлении записи. Попробуйте еще раз'
+    let errorMessage = error?.message || 'Ошибка при добавлении книги в фонд'
     toast.error(errorMessage)
-    console.error('Error:', error.message)
+    console.error('Error:', error)
   }
 }
 
@@ -748,25 +738,11 @@ const coverPreview = computed(() => {
   return null
 })
 
-const updateBookSpecials = () => {
-  if (showMaterialSpecs.value) {
-    form.value.book_specials = {
-      sizes: materialSpecs.value.size,
-      material_info: materialSpecs.value.accompanyingMaterial,
-      additional_info: materialSpecs.value.otherPhysicalDetails
-    }
-  }
-}
-
-const updateBookAddresses = () => {
-  if (showManufacturerAddress.value) {
-    form.value.book_addresses = {
-      country_id: manufacturerAddress.value.country,
-      city_id: manufacturerAddress.value.city,
-      postal_index: manufacturerAddress.value.postalCode,
-      street_name: manufacturerAddress.value.street,
-      number: manufacturerAddress.value.houseNumber,
-      company_name: manufacturerAddress.value.company
+function initializeFromStore() {
+  if (bookStore.bookData) {
+    form.value = {
+      ...form.value,
+      ...bookStore.bookData
     }
   }
 }
@@ -790,6 +766,11 @@ getAgeCharacteristics()
 getGenres()
 getBindings()
 getContentTypes()
+initializeFromStore()
+
+onUnmounted(() => {
+  bookStore.clearBookData()
+})
 </script>
 
 <template>
@@ -1503,38 +1484,6 @@ getContentTypes()
               <v-row>
                 <v-col>
                   <v-checkbox
-                    v-model="showMaterialSpecs"
-                    label="Обозначение специфического вида материала и физические характеристики"
-                  ></v-checkbox>
-
-                  <v-expand-transition>
-                    <div v-if="showMaterialSpecs">
-                      <v-text-field
-                        v-model="materialSpecs.size"
-                        label="Размеры"
-                        variant="outlined"
-                        @input="updateBookSpecials"
-                      ></v-text-field>
-                      <v-text-field
-                        v-model="materialSpecs.accompanyingMaterial"
-                        label="Сведения о сопроводительном материале"
-                        variant="outlined"
-                        @input="updateBookSpecials"
-                      ></v-text-field>
-                      <v-textarea
-                        v-model="materialSpecs.otherPhysicalDetails"
-                        label="Другие сведения о физической характеристике"
-                        variant="outlined"
-                        @input="updateBookSpecials"
-                      ></v-textarea>
-                    </div>
-                  </v-expand-transition>
-                </v-col>
-              </v-row>
-
-              <v-row>
-                <v-col>
-                  <v-checkbox
                     v-model="showManufacturerAddress"
                     label="Адрес изготовления"
                   ></v-checkbox>
@@ -1547,7 +1496,6 @@ getContentTypes()
                             v-model="manufacturerAddress.country"
                             label="Страна"
                             variant="outlined"
-                            @input="updateBookAddresses"
                           ></v-text-field>
                         </v-col>
                         <v-col>
@@ -1555,7 +1503,6 @@ getContentTypes()
                             v-model="manufacturerAddress.city"
                             label="Город"
                             variant="outlined"
-                            @input="updateBookAddresses"
                           ></v-text-field>
                         </v-col>
                       </v-row>
@@ -1591,6 +1538,35 @@ getContentTypes()
                           ></v-text-field>
                         </v-col>
                       </v-row>
+                    </div>
+                  </v-expand-transition>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col>
+                  <v-checkbox
+                    v-model="showMaterialSpecs"
+                    label="Обозначение специфического вида материала и физические характеристики"
+                  ></v-checkbox>
+
+                  <v-expand-transition>
+                    <div v-if="showMaterialSpecs">
+                      <v-text-field
+                        v-model="materialSpecs.size"
+                        label="Размеры"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="materialSpecs.accompanyingMaterial"
+                        label="Сведения о сопроводительном материале"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-textarea
+                        v-model="materialSpecs.otherPhysicalDetails"
+                        label="Другие сведения о физической характеристике"
+                        variant="outlined"
+                      ></v-textarea>
                     </div>
                   </v-expand-transition>
                 </v-col>
@@ -1754,28 +1730,8 @@ getContentTypes()
 
     <v-row>
       <v-col class="text-center">
-        <v-btn
-          v-if="!showAdditionalData"
-          class="mr-2"
-          color="primary"
-          prepend-icon="mdi-plus"
-          variant="flat"
-          @click="showAdditionalData = true"
-          >Добавить дополнительные параметры
-        </v-btn>
-
-        <v-btn
-          v-if="!showFundData"
-          class="mr-2"
-          color="primary"
-          prepend-icon="mdi-plus"
-          variant="flat"
-          @click="showFundData = true"
-          >Добавить фонд
-        </v-btn>
-
         <v-btn color="green" prepend-icon="mdi-plus" variant="flat" @click="sendBookData"
-          >Добавить запись
+          >Добавить фонд
         </v-btn>
       </v-col>
     </v-row>

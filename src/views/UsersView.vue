@@ -218,7 +218,9 @@ async function getUsers() {
     }
     loading.value = false
   } catch (error: any) {
-    console.error('Error:', error.message)
+    let errorMessage = error?.message || 'Ошибка при загрузке пользователей'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
@@ -236,6 +238,8 @@ async function sendFile() {
       }
     }
   } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при загрузке файла'
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }

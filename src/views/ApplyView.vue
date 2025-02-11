@@ -124,12 +124,10 @@ const checkID = async () => {
       toast.success(response.data.message)
       return true
     }
-  } catch (e: any) {
-    let errorMessage = 'Ошибка при проверке БИН'
-    if (e.response?.data?.message) {
-      errorMessage = e.response.data.message
-    }
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при проверке БИН'
     toast.error(errorMessage)
+    console.error('Error:', error)
   }
   return false
 }
@@ -223,13 +221,10 @@ const sendApply = async () => {
       toast.success('Заявка успешно отправлена')
       step.value = 5
     }
-  } catch (e: any) {
-    let errorMessage = 'Ошибка при отправке заявки'
-    if (e.response?.data?.message) {
-      errorMessage = e.response.data.message
-    }
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при отправке заявки'
     toast.error(errorMessage)
-    console.error('Error:', e)
+    console.error('Error:', error)
   }
 }
 

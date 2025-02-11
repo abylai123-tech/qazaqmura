@@ -69,10 +69,7 @@ async function addToInventory(inventories: Number[]) {
     toast.success('Инвентарные номера успешно добавлены')
     closeInventory()
   } catch (error: any) {
-    let errorMessage = 'Ошибка при добавлении инвентарных номеров'
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    }
+    let errorMessage = error?.message || 'Ошибка при добавлении инвентарных номеров'
     toast.error(errorMessage)
     console.error('Error:', error)
   }
@@ -274,10 +271,7 @@ const editInvent = async (item) => {
     toast.success('Инвентарный номер успешно обновлен')
     item.editMode = false
   } catch (error: any) {
-    let errorMessage = 'Ошибка при обновлении инвентарного номера'
-    if (error.response?.data?.message) {
-      errorMessage = error.response.data.message
-    }
+    let errorMessage = error?.message || 'Ошибка при обновлении инвентарного номера'
     toast.error(errorMessage)
     console.error('Error:', error)
   }
