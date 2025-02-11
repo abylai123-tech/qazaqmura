@@ -124,8 +124,8 @@ onMounted(() => {
             <v-col class="flex-grow-1">
               <div class="d-flex flex-column justify-space-between h-100">
                 <div>
-                  <div class="text-h6 mb-1 text-truncate">{{ book.title }}</div>
-                  <div class="text-primary mb-4 text-truncate">{{ getBookSubtitle(book) }}</div>
+                  <h3 class="mb-1">{{ book.title }}</h3>
+                  <div class="text-primary mb-4">{{ getBookSubtitle(book) }}</div>
                 </div>
                 <div class="d-flex flex-wrap align-center metadata-info">
                   <div class="text-caption text-grey">

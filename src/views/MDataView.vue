@@ -1761,7 +1761,6 @@ watch(page, (newValue) => {
                               <template v-slot:activator="{ props }">
                                 <v-list-item
                                   v-bind="props"
-                                  @click="addToFund(item)"
                                   class="cursor-pointer"
                                   hover
                                 >
