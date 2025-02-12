@@ -191,4 +191,20 @@ onMounted(() => {
 .metadata-info {
   gap: 8px;
 }
+
+@media not all and (min-resolution:.001dpcm) { 
+  @supports (-webkit-appearance:none) {
+    h3 {
+      font-weight: bold;
+      color: black;
+    }
+  }
+}
+@supports (-webkit-touch-callout: none) {
+  h3 {
+    color: black;
+    font-weight: bold;
+  }
+}
+
 </style>

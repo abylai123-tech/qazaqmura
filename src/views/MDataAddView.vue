@@ -253,6 +253,57 @@ const seriesArea = ref({
   issn: ''
 })
 
+const rules = {
+  required: (v: any) => !!v || 'Поле обязательно для заполнения'
+}
+
+const titleValid = ref(false)
+const annotationValid = ref(false)
+const pagesValid = ref(false)
+const yearValid = ref(false)
+const authorMainValid = ref(false)
+const publisherValid = ref(false)
+const typeValid = ref(false)
+const languageValid = ref(false)
+const materialsValid = ref(false)
+const tagsValid = ref(false)
+const bbkValid = ref(false)
+const udkValid = ref(false)
+
+const isFormValid = computed(() => {
+  return (
+    titleValid.value &&
+    annotationValid.value &&
+    pagesValid.value &&
+    yearValid.value &&
+    authorMainValid.value &&
+    publisherValid.value &&
+    typeValid.value &&
+    languageValid.value &&
+    materialsValid.value &&
+    tagsValid.value &&
+    bbkValid.value &&
+    udkValid.value
+  )
+})
+
+// Add a new ref to track if form was submitted
+const formSubmitted = ref(false)
+
+// Update the error computed properties to show errors after form submission
+const titleError = computed(() => formSubmitted.value && !titleValid.value)
+const annotationError = computed(() => formSubmitted.value && !annotationValid.value)
+const pagesError = computed(() => formSubmitted.value && !pagesValid.value)
+const yearError = computed(() => formSubmitted.value && !yearValid.value)
+const authorMainError = computed(() => formSubmitted.value && !authorMainValid.value)
+const publisherError = computed(() => formSubmitted.value && !publisherValid.value)
+const typeError = computed(() => formSubmitted.value && !typeValid.value)
+const languageError = computed(() => formSubmitted.value && !languageValid.value)
+const materialsError = computed(() => formSubmitted.value && !materialsValid.value)
+const tagsError = computed(() => formSubmitted.value && !tagsValid.value)
+const bbkError = computed(() => formSubmitted.value && !bbkValid.value)
+const udkError = computed(() => formSubmitted.value && !udkValid.value)
+
 async function getAuthors(search = null) {
   try {
     let request = `/v1/author`
@@ -581,8 +632,10 @@ const udk = ref(null)
 const handleFinish = (value: any, mode: 'bbk' | 'udk') => {
   if (mode === 'bbk') {
     bbk.value = value
+    bbkValid.value = !!value
   } else {
     udk.value = value
+    udkValid.value = !!value
   }
 }
 
@@ -672,6 +725,12 @@ function setNewItem(
 const router = useRouter()
 
 async function sendBookData() {
+  formSubmitted.value = true // Set form as submitted to trigger error display
+
+  if (!isFormValid.value) {
+    toast.error('Пожалуйста, заполните все обязательные поля')
+    return
+  }
   const body = removeNullOrEmptyFields(form.value)
 
   if (showMaterialSpecs.value) {
@@ -830,8 +889,11 @@ getContentTypes()
                   <v-col>
                     <v-text-field
                       v-model="form.title"
-                      :label="t('name')"
+                      :label="t('name') + ' *'"
                       placeholder="Напишите название"
+                      :rules="[rules.required]"
+                      :error="titleError"
+                      @update:model-value="titleValid = $event?.length > 0"
                       required
                       variant="outlined"
                     ></v-text-field>
@@ -892,8 +954,11 @@ getContentTypes()
                   <v-col>
                     <v-textarea
                       v-model="form.annotation"
-                      label="Аннотация"
+                      :label="'Аннотация *'"
                       placeholder="Напишите более 15 слов"
+                      :rules="[rules.required]"
+                      :error="annotationError"
+                      @update:model-value="annotationValid = !!$event"
                       variant="outlined"
                     ></v-textarea>
                   </v-col>
@@ -903,9 +968,12 @@ getContentTypes()
                   <v-col>
                     <v-text-field
                       v-model="form.pages"
-                      label="Страницы"
+                      :label="'Страницы *'"
                       placeholder="Укажите"
                       type="number"
+                      :rules="[rules.required]"
+                      :error="pagesError"
+                      @update:model-value="pagesValid = !!$event"
                       variant="outlined"
                     ></v-text-field>
                   </v-col>
@@ -913,10 +981,12 @@ getContentTypes()
                   <v-col>
                     <v-text-field
                       v-model="form.year"
-                      :label="t('year_of_publication')"
+                      :label="t('year_of_publication') + ' *'"
                       placeholder="Укажите"
-                      prepend-inner-icon="mdi-magnify"
                       type="number"
+                      :rules="[rules.required]"
+                      :error="yearError"
+                      @update:model-value="yearValid = !!$event"
                       variant="outlined"
                     ></v-text-field>
                   </v-col>
@@ -944,7 +1014,10 @@ getContentTypes()
                     :items="authors"
                     item-title="name"
                     item-value="id"
-                    label="Основной автор"
+                    :label="'Основной автор *'"
+                    :rules="[rules.required]"
+                    :error="authorMainError"
+                    @update:model-value="authorMainValid = !!$event"
                     placeholder="Укажите автора"
                     variant="outlined"
                     @update:search="getAuthors"
@@ -1066,9 +1139,11 @@ getContentTypes()
                     v-model="form.publisher_id"
                     :items="publishers"
                     item-value="id"
-                    :label="t('publisher')"
+                    :label="t('publisher') + ' *'"
+                    :rules="[rules.required]"
+                    :error="publisherError"
+                    @update:model-value="publisherValid = !!$event"
                     placeholder="Укажите издателя"
-                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                     @update:search="getPublishers"
                   >
@@ -1111,9 +1186,11 @@ getContentTypes()
                     v-model="form.type_id"
                     :items="types"
                     item-value="id"
-                    :label="t('type')"
+                    :label="t('type') + ' *'"
+                    :rules="[rules.required]"
+                    :error="typeError"
+                    @update:model-value="typeValid = !!$event"
                     placeholder="Поиск"
-                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                   ></v-autocomplete>
                 </v-col>
@@ -1125,10 +1202,12 @@ getContentTypes()
                     v-model="form.language_id"
                     :items="languages"
                     item-value="id"
-                    :label="t('language')"
+                    :label="t('language') + ' *'"
+                    :rules="[rules.required]"
+                    :error="languageError"
+                    @update:model-value="languageValid = !!$event"
                     multiple
                     placeholder="Поиск"
-                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                   ></v-autocomplete>
                 </v-col>
@@ -1139,9 +1218,11 @@ getContentTypes()
                     chips
                     item-title="label"
                     item-value="id"
-                    label="Обозначение материала"
+                    :label="'Обозначение материала *'"
+                    :rules="[rules.required]"
+                    :error="materialsError"
+                    @update:model-value="materialsValid = !!$event"
                     placeholder="Поиск"
-                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                   ></v-autocomplete>
                 </v-col>
@@ -1190,11 +1271,12 @@ getContentTypes()
                     chips
                     item-title="label"
                     item-value="id"
-                    label="Ключевые слова"
+                    :label="'Ключевые слова *'"
+                    :rules="[rules.required]"
+                    :error="tagsError"
+                    @update:model-value="tagsValid = !!$event"
                     multiple
                     placeholder="Поиск"
-                    prepend-inner-icon="mdi-magnify"
-                    return-object
                     variant="outlined"
                     @update:search="getTags"
                   >
@@ -1214,17 +1296,31 @@ getContentTypes()
                 <v-col>
                   <div class="d-flex">
                     <div class="d-flex flex-column w-50">
-                      <span class="mb-2">ББК</span>
-                      <bk-dialog mode="bbk" @finish="handleFinish($event, 'bbk')"></bk-dialog>
+                      <span class="mb-2" :class="{ 'error-text': formSubmitted && !bbkValid }"
+                        >ББК *</span
+                      >
+                      <div>
+                        <bk-dialog mode="bbk" @finish="handleFinish($event, 'bbk')"></bk-dialog>
+                      </div>
                       <div v-if="bbk" class="mt-2 font-weight-bold">
                         {{ bbk.map((item) => item.title).join(', ') }}
                       </div>
+                      <div v-if="formSubmitted && !bbkValid" class="error-text mt-1">
+                        Поле обязательно для заполнения
+                      </div>
                     </div>
                     <div class="d-flex flex-column ml-4 w-50">
-                      <span class="mb-2">УДК</span>
-                      <bk-dialog mode="udk" @finish="handleFinish($event, 'udk')"></bk-dialog>
+                      <span class="mb-2" :class="{ 'error-text': formSubmitted && !udkValid }"
+                        >УДК *</span
+                      >
+                      <div>
+                        <bk-dialog mode="udk" @finish="handleFinish($event, 'udk')"></bk-dialog>
+                      </div>
                       <div v-if="udk" class="mt-2 font-weight-bold">
                         {{ udk.map((item) => item.title).join(', ') }}
+                      </div>
+                      <div v-if="formSubmitted && !udkValid" class="error-text mt-1">
+                        Поле обязательно для заполнения
                       </div>
                     </div>
                   </div>
@@ -1774,8 +1870,8 @@ getContentTypes()
           >Добавить фонд
         </v-btn>
 
-        <v-btn color="green" prepend-icon="mdi-plus" variant="flat" @click="sendBookData"
-          >Добавить запись
+        <v-btn color="green" prepend-icon="mdi-plus" variant="flat" @click="sendBookData">
+          Добавить запись
         </v-btn>
       </v-col>
     </v-row>
@@ -1817,3 +1913,14 @@ getContentTypes()
     </v-dialog>
   </v-container>
 </template>
+
+<style scoped>
+.error-text {
+  color: rgb(var(--v-theme-error)) !important;
+}
+
+.error-border {
+  border: 1px solid rgb(var(--v-theme-error)) !important;
+  border-radius: 4px;
+}
+</style>
