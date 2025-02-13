@@ -192,19 +192,33 @@ onMounted(() => {
   gap: 8px;
 }
 
-@media not all and (min-resolution:.001dpcm) { 
-  @supports (-webkit-appearance:none) {
+/* Update Safari-specific styles to be more specific and comprehensive */
+h3 {
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.87); /* Match Vuetify's default text color */
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  letter-spacing: 0.0125em;
+}
+
+/* Safari-specific overrides */
+@media not all and (min-resolution: 0.001dpcm) {
+  @supports (-webkit-appearance: none) {
     h3 {
-      font-weight: bold;
-      color: black;
+      font-weight: 600 !important;
+      color: rgba(0, 0, 0, 0.87) !important;
+      -webkit-font-smoothing: antialiased;
     }
   }
 }
+
+/* iOS Safari specific overrides */
 @supports (-webkit-touch-callout: none) {
   h3 {
-    color: black;
-    font-weight: bold;
+    font-weight: 600 !important;
+    color: rgba(0, 0, 0, 0.87) !important;
+    -webkit-font-smoothing: antialiased;
   }
 }
-
 </style>
