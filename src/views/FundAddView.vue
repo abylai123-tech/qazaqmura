@@ -15,8 +15,8 @@ const route = useRoute()
 const bookStore = useBookStore()
 
 interface Form {
-  author_id: number[] | null
-  author_id_main: number[] | null
+  author_id: number[]
+  author_id_main: number[]
   bbk_id: number | null
   udk_id: number | null
   category_id: number | null
@@ -47,7 +47,7 @@ interface Form {
   tags: number[] | null
   part: number | null
   volume: number | null
-  materials: number[] | null
+  materials: number[]
   link: { URL: string; title: string }
   subject_heading_id: number | null
   discipline_id: number | null
@@ -239,8 +239,8 @@ const showMaterialSpecs = ref(false)
 const showSeriesArea = ref(false)
 
 const manufacturerAddress = ref({
-  country: '',
-  city: '',
+  country: null,
+  city: null,
   postalCode: '',
   street: '',
   houseNumber: '',
@@ -264,6 +264,24 @@ const seriesArea = ref({
   },
   issn: ''
 })
+
+const epubFileInfo = computed(() => {
+  if (epubFile.value) {
+    return {
+      name: epubFile.value.name,
+      size: (epubFile.value.size / (1024 * 1024)).toFixed(2) + ' MB'
+    }
+  }
+  return null
+})
+
+const handleCountrySelect = async () => {
+  await getCountries(null, true)
+}
+
+const handleCitySelect = async () => {
+  await getCities(null, true)
+}
 
 async function getAuthors(search = null) {
   try {
@@ -356,11 +374,11 @@ async function getPublishers(search = null) {
   }
 }
 
-async function getCities(search = null) {
+async function getCities(search = null, forceRefresh = false) {
   try {
     let request = `/v1/city`
-    if (search) {
-      request += `?search=${search}`
+    if (search || forceRefresh) {
+      request += `?search=${search || ''}`
     }
     const response = await api.fetchData<{ data: { items: Publisher[] } }>(request)
     if (response.data) cities.value = response.data.data.items
@@ -546,11 +564,11 @@ async function getTags(search = null) {
 
 const countries = ref([])
 
-async function getCountries(search = null) {
+async function getCountries(search = null, forceRefresh = false) {
   try {
     let request = `/v1/country`
-    if (search) {
-      request += `?search=${search}`
+    if (search || forceRefresh) {
+      request += `?search=${search || ''}`
     }
     const response = await api.fetchData<{ data: { items: Author[] } }>(request)
     if (response.data) countries.value = response.data.data.items
@@ -685,7 +703,11 @@ const router = useRouter()
 
 async function sendBookData() {
   const body = removeNullOrEmptyFields(form.value)
-  if (body.materials) body.materials = [body.materials]
+
+  if (body.materials) {
+    body.materials = Array.isArray(body.materials) ? body.materials : [body.materials]
+  }
+
   if (bbk.value) {
     body.bbk_id = bbk.value[bbk.value.length - 1].id
   }
@@ -1325,6 +1347,7 @@ onUnmounted(() => {
                     return-object
                     variant="outlined"
                     @update:search="getCountries"
+                    @update:model-value="handleCountrySelect"
                   ></v-autocomplete>
                 </v-col>
               </v-row>
@@ -1349,8 +1372,8 @@ onUnmounted(() => {
                     </div>
                     <div class="d-flex flex-column ml-4">
                       <span class="mb-2">EPUB</span>
-                      <v-btn color="primary" variant="outlined" @click="handleEpub"
-                        >Выбрать файл
+                      <v-btn color="primary" variant="outlined" @click="handleEpub">
+                        Выбрать файл
                       </v-btn>
                       <input
                         ref="epub"
@@ -1359,6 +1382,10 @@ onUnmounted(() => {
                         type="file"
                         @input="handleEpubUpload"
                       />
+                      <div v-if="epubFileInfo" class="mt-2">
+                        <div class="text-body-2">{{ epubFileInfo.name }}</div>
+                        <div class="text-caption">{{ epubFileInfo.size }}</div>
+                      </div>
                     </div>
                   </div>
                 </v-col>
@@ -1491,18 +1518,30 @@ onUnmounted(() => {
                     <div v-if="showManufacturerAddress">
                       <v-row>
                         <v-col>
-                          <v-text-field
+                          <v-autocomplete
                             v-model="manufacturerAddress.country"
+                            :items="countries"
+                            item-title="title"
+                            item-value="id"
                             label="Страна"
+                            placeholder="Поиск"
                             variant="outlined"
-                          ></v-text-field>
+                            @update:search="getCountries"
+                            @update:model-value="handleCountrySelect"
+                          ></v-autocomplete>
                         </v-col>
                         <v-col>
-                          <v-text-field
+                          <v-autocomplete
                             v-model="manufacturerAddress.city"
+                            :items="cities"
+                            item-title="title"
+                            item-value="id"
                             label="Город"
+                            placeholder="Поиск"
                             variant="outlined"
-                          ></v-text-field>
+                            @update:search="getCities"
+                            @update:model-value="handleCitySelect"
+                          ></v-autocomplete>
                         </v-col>
                       </v-row>
                       <v-row>
