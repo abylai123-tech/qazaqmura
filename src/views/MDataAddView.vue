@@ -12,8 +12,8 @@ const api = useAPI()
 const toast = useToastStore()
 
 interface Form {
-  author_id: number[] | null
-  author_id_main: number[] | null
+  author_id: number[]
+  author_id_main: number
   bbk_id: number | null
   udk_id: number | null
   category_id: number | null
@@ -40,11 +40,11 @@ interface Form {
   education_level_id: number | null
   reprint_book_id: number[] | null
   reprint_publisher_id: number[] | null
-  titles: { language_id: number; title: string }[]
-  tags: number[] | null
+  titles: { language_id: number; title: string; title2?: string }[]
+  tags: number[]
   part: number | null
   volume: number | null
-  materials: number[] | null
+  materials: number[]
   link: { URL: string; title: string }
   subject_heading_id: number | null
   discipline_id: number | null
@@ -125,7 +125,6 @@ const publishers: Ref<Publisher[]> = ref([])
 const cities: Ref<Publisher[]> = ref([])
 const types: Ref<Publisher[]> = ref([])
 const languages: Ref<Publisher[]> = ref([])
-const additionalAuthors: Ref<boolean> = ref(false)
 const contractors: Ref<Contractor[]> = ref([])
 const qualifications: Ref<any[]> = ref([])
 const specialties: Ref<any[]> = ref([])
@@ -152,7 +151,7 @@ const parts = [
 const auth = useAuth()
 const form: Ref<Form> = ref({
   author_id: [],
-  author_id_main: [],
+  author_id_main: null,
   bbk_id: null,
   udk_id: null,
   category_id: null,
@@ -215,7 +214,7 @@ const newItem: Ref<{
   title: string
   active: boolean
   label: string
-  itemType: 'author' | 'publisher' | 'genre' | 'subjectHeading' | 'contractor' | null
+  itemType: 'author' | 'publisher' | 'genre' | 'subjectHeading' | 'contractor' | 'tag'
   companyId?: string
   address?: string
 }> = ref({
@@ -223,7 +222,7 @@ const newItem: Ref<{
   active: false,
   title: '',
   label: '',
-  itemType: null
+  itemType: 'author'
 })
 
 const showAdditionalParams = ref(false)
@@ -240,8 +239,8 @@ const showMaterialSpecs = ref(false)
 const showSeriesArea = ref(false)
 
 const manufacturerAddress = ref({
-  country: '',
-  city: '',
+  country: null,
+  city: null,
   postalCode: '',
   street: '',
   houseNumber: '',
@@ -317,11 +316,11 @@ const tagsError = computed(() => formSubmitted.value && !tagsValid.value)
 const bbkError = computed(() => formSubmitted.value && !bbkValid.value)
 const udkError = computed(() => formSubmitted.value && !udkValid.value)
 
-async function getAuthors(search = null) {
+async function getAuthors(search = null, forceRefresh = false) {
   try {
     let request = `/v1/author`
-    if (search) {
-      request += `?search=${search}`
+    if (search || forceRefresh) {
+      request += `?search=${search || ''}`
     }
     const response = await api.fetchData<{ data: { items: Author[] } }>(request)
     if (response.data) authors.value = response.data.data.items
@@ -329,6 +328,15 @@ async function getAuthors(search = null) {
     toast.error('Ошибка при загрузке списка авторов')
     console.error('Error:', error.message)
   }
+}
+
+// Add handlers for author selection
+const handleMainAuthorSelect = async () => {
+  await getAuthors(null, true) // Force refresh after selection
+}
+
+const handleAdditionalAuthorSelect = async () => {
+  await getAuthors(null, true) // Force refresh after selection
 }
 
 async function addNewItem(
@@ -408,11 +416,11 @@ async function getPublishers(search = null) {
   }
 }
 
-async function getCities(search = null) {
+async function getCities(search = null, forceRefresh = false) {
   try {
     let request = `/v1/city`
-    if (search) {
-      request += `?search=${search}`
+    if (search || forceRefresh) {
+      request += `?search=${search || ''}`
     }
     const response = await api.fetchData<{ data: { items: Publisher[] } }>(request)
     if (response.data) cities.value = response.data.data.items
@@ -581,7 +589,7 @@ async function getSubjectHeadings(search = null) {
   }
 }
 
-const tags = ref([])
+const tags: Ref<Author[]> = ref([])
 
 async function getTags(search = null) {
   try {
@@ -596,13 +604,13 @@ async function getTags(search = null) {
   }
 }
 
-const countries = ref([])
+const countries: Ref<Author[]> = ref([])
 
-async function getCountries(search = null) {
+async function getCountries(search = null, forceRefresh = false) {
   try {
     let request = `/v1/country`
-    if (search) {
-      request += `?search=${search}`
+    if (search || forceRefresh) {
+      request += `?search=${search || ''}`
     }
     const response = await api.fetchData<{ data: { items: Author[] } }>(request)
     if (response.data) countries.value = response.data.data.items
@@ -611,7 +619,7 @@ async function getCountries(search = null) {
   }
 }
 
-const copyrightSigns = ref([])
+const copyrightSigns: Ref<Author[]> = ref([])
 
 async function getCopyrightSigns(search = null) {
   try {
@@ -639,8 +647,13 @@ async function getAgeCharacteristics(search = null) {
   }
 }
 
-const bbk = ref(null)
-const udk = ref(null)
+interface BKItem {
+  id: number
+  title: string
+}
+
+const bbk: Ref<BKItem[]> = ref([])
+const udk: Ref<BKItem[]> = ref([])
 
 const handleFinish = (value: any, mode: 'bbk' | 'udk') => {
   if (mode === 'bbk') {
@@ -738,21 +751,57 @@ function setNewItem(
 const router = useRouter()
 
 async function sendBookData() {
-  formSubmitted.value = true // Set form as submitted to trigger error display
+  formSubmitted.value = true
 
   if (!isFormValid.value) {
     toast.error('Пожалуйста, заполните все обязательные поля')
     return
   }
 
-  const body = removeNullOrEmptyFields(form.value)
+  const bookData = {
+    title: form.value.title,
+    annotation: form.value.annotation,
+    author_id_main: [form.value.author_id_main],
+    language_id: form.value.language_id,
+    materials: Array.isArray(form.value.materials) ? form.value.materials : [form.value.materials],
+    pages: form.value.pages,
+    publisher_id: form.value.publisher_id,
+    type_id: form.value.type_id,
+    year: form.value.year,
+    link: form.value.link,
+    bbk_id: bbk.value?.[bbk.value.length - 1]?.id,
+    udk_id: udk.value?.[udk.value.length - 1]?.id
+  }
+
+  const body = removeNullOrEmptyFields(bookData)
 
   if (showMaterialSpecs.value) {
     body.book_specials = removeNullOrEmptyFields(materialSpecs.value)
   }
 
   if (showManufacturerAddress.value) {
-    body.book_addresses = removeNullOrEmptyFields(form.value.book_addresses)
+    const addresses: any = {}
+
+    if (manufacturerAddress.value.country) {
+      addresses.country_id = manufacturerAddress.value.country
+    }
+    if (manufacturerAddress.value.city) {
+      addresses.city_id = manufacturerAddress.value.city
+    }
+    if (manufacturerAddress.value.postalCode) {
+      addresses.postal_index = manufacturerAddress.value.postalCode
+    }
+    if (manufacturerAddress.value.street) {
+      addresses.street_name = manufacturerAddress.value.street
+    }
+    if (manufacturerAddress.value.houseNumber) {
+      addresses.number = manufacturerAddress.value.houseNumber
+    }
+    if (manufacturerAddress.value.company) {
+      addresses.company_name = manufacturerAddress.value.company
+    }
+
+    form.value.book_addresses = addresses
   }
 
   if (showSeriesArea.value) {
@@ -768,8 +817,7 @@ async function sendBookData() {
     body.book_areas = removeNullOrEmptyFields(body.book_areas)
   }
 
-  body.author_id_main = [body.author_id_main]
-  if (body.materials) body.materials = [body.materials]
+  body.author_id = form.value.author_id
   if (bbk.value) {
     body.bbk_id = bbk.value[bbk.value.length - 1].id
   }
@@ -778,15 +826,35 @@ async function sendBookData() {
   }
 
   try {
-    const response = await api.postData<Form, { id: number }>('/v1/book', body)
+    // First create the book
+    const response = await api.postData<typeof bookData, { id: number }>('/v1/book', body)
     if (!response.data) {
       throw new Error('No data received from server')
     }
+
     const id = response.data.id
+
+    // Upload cover if exists
+    if (file.value) {
+      const formData = new FormData()
+      formData.append('cover', file.value)
+      formData.append('book_id', id.toString())
+      await api.postData('/v1/book/cover', formData)
+    }
+
+    // Upload EPUB if exists
+    if (epub.value) {
+      const formData = new FormData()
+      formData.append('epub', epubFile.value)
+      formData.append('book_id', id.toString())
+      await api.postData('/v1/book/epub', formData)
+    }
+
     if (showFundData.value) {
       admission.value.book_id = id
       await api.postData('/v1/book/admission', admission.value)
     }
+
     toast.success('Запись успешно добавлена')
     router.push('/m-data')
   } catch (error: any) {
@@ -842,15 +910,49 @@ const updateBookSpecials = () => {
 
 const updateBookAddresses = () => {
   if (showManufacturerAddress.value) {
-    form.value.book_addresses = {
-      country_id: manufacturerAddress.value.country,
-      city_id: manufacturerAddress.value.city,
-      postal_index: manufacturerAddress.value.postalCode,
-      street_name: manufacturerAddress.value.street,
-      number: manufacturerAddress.value.houseNumber,
-      company_name: manufacturerAddress.value.company
+    const addresses: any = {}
+
+    if (manufacturerAddress.value.country) {
+      addresses.country_id = manufacturerAddress.value.country
+    }
+    if (manufacturerAddress.value.city) {
+      addresses.city_id = manufacturerAddress.value.city
+    }
+    if (manufacturerAddress.value.postalCode) {
+      addresses.postal_index = manufacturerAddress.value.postalCode
+    }
+    if (manufacturerAddress.value.street) {
+      addresses.street_name = manufacturerAddress.value.street
+    }
+    if (manufacturerAddress.value.houseNumber) {
+      addresses.number = manufacturerAddress.value.houseNumber
+    }
+    if (manufacturerAddress.value.company) {
+      addresses.company_name = manufacturerAddress.value.company
+    }
+
+    form.value.book_addresses = addresses
+  }
+}
+
+// Add a computed property for EPUB file info
+const epubFileInfo = computed(() => {
+  if (epubFile.value) {
+    return {
+      name: epubFile.value.name,
+      size: (epubFile.value.size / (1024 * 1024)).toFixed(2) + ' MB'
     }
   }
+  return null
+})
+
+// Add handlers for country and city selection
+const handleCountrySelect = async () => {
+  await getCountries(null, true) // Force refresh after selection
+}
+
+const handleCitySelect = async () => {
+  await getCities(null, true) // Force refresh after selection
 }
 
 getAuthors()
@@ -1040,16 +1142,22 @@ getContentTypes()
                     :label="'Основной автор *'"
                     :rules="[rules.required]"
                     :error="authorMainError"
-                    @update:model-value="authorMainValid = !!$event"
+                    @update:model-value="
+                      (val) => {
+                        authorMainValid = !!val
+                        handleMainAuthorSelect()
+                      }
+                    "
                     placeholder="Укажите автора"
                     variant="outlined"
                     @update:search="getAuthors"
+                    :multiple="false"
                   >
                     <template v-slot:no-data>
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного автора нет в списке</span>
-                        <v-btn color="primary" variant="flat" @click="setNewItem('author')"
-                          >{{ t('add') }}
+                        <v-btn color="primary" variant="flat" @click="setNewItem('author')">
+                          {{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -1057,7 +1165,7 @@ getContentTypes()
                 </v-col>
               </v-row>
 
-              <v-row v-if="additionalAuthors">
+              <v-row>
                 <v-col>
                   <v-autocomplete
                     v-model="form.author_id"
@@ -1069,45 +1177,18 @@ getContentTypes()
                     placeholder="Укажите автора"
                     variant="outlined"
                     @update:search="getAuthors"
+                    @update:model-value="handleAdditionalAuthorSelect"
+                    :clearable="true"
                   >
                     <template v-slot:no-data>
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного автора нет в списке</span>
-                        <v-btn color="primary" variant="flat" @click="setNewItem('author')"
-                          >{{ t('add') }}
+                        <v-btn color="primary" variant="flat" @click="setNewItem('author')">
+                          {{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
                   </v-autocomplete>
-                </v-col>
-              </v-row>
-
-              <v-row v-if="!additionalAuthors">
-                <v-col>
-                  <v-btn
-                    color="primary"
-                    prepend-icon="mdi-plus"
-                    variant="outlined"
-                    @click="additionalAuthors = true"
-                  >
-                    Добавить других авторов
-                  </v-btn>
-                </v-col>
-              </v-row>
-
-              <v-row>
-                <v-col>
-                  <v-autocomplete
-                    v-model="form.qualification_id"
-                    :items="qualifications"
-                    item-title="title"
-                    item-value="id"
-                    label="Квалификация"
-                    placeholder="Поиск"
-                    prepend-inner-icon="mdi-magnify"
-                    variant="outlined"
-                    @update:search="getQualifications"
-                  ></v-autocomplete>
                 </v-col>
               </v-row>
 
@@ -1464,6 +1545,7 @@ getContentTypes()
                     return-object
                     variant="outlined"
                     @update:search="getCountries"
+                    @update:model-value="handleCountrySelect"
                   ></v-autocomplete>
                 </v-col>
               </v-row>
@@ -1488,8 +1570,8 @@ getContentTypes()
                     </div>
                     <div class="d-flex flex-column ml-4">
                       <span class="mb-2">EPUB</span>
-                      <v-btn color="primary" variant="outlined" @click="handleEpub"
-                        >Выбрать файл
+                      <v-btn color="primary" variant="outlined" @click="handleEpub">
+                        Выбрать файл
                       </v-btn>
                       <input
                         ref="epub"
@@ -1498,6 +1580,10 @@ getContentTypes()
                         type="file"
                         @input="handleEpubUpload"
                       />
+                      <div v-if="epubFileInfo" class="mt-2">
+                        <div class="text-body-2">{{ epubFileInfo.name }}</div>
+                        <div class="text-caption">{{ epubFileInfo.size }}</div>
+                      </div>
                     </div>
                   </div>
                 </v-col>
@@ -1662,20 +1748,30 @@ getContentTypes()
                     <div v-if="showManufacturerAddress">
                       <v-row>
                         <v-col>
-                          <v-text-field
+                          <v-autocomplete
                             v-model="manufacturerAddress.country"
+                            :items="countries"
+                            item-title="title"
+                            item-value="id"
                             label="Страна"
+                            placeholder="Поиск"
                             variant="outlined"
-                            @input="updateBookAddresses"
-                          ></v-text-field>
+                            @update:search="getCountries"
+                            @update:model-value="handleCountrySelect"
+                          ></v-autocomplete>
                         </v-col>
                         <v-col>
-                          <v-text-field
+                          <v-autocomplete
                             v-model="manufacturerAddress.city"
+                            :items="cities"
+                            item-title="title"
+                            item-value="id"
                             label="Город"
+                            placeholder="Поиск"
                             variant="outlined"
-                            @input="updateBookAddresses"
-                          ></v-text-field>
+                            @update:search="getCities"
+                            @update:model-value="handleCitySelect"
+                          ></v-autocomplete>
                         </v-col>
                       </v-row>
                       <v-row>

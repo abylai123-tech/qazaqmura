@@ -170,6 +170,8 @@ const editData = async (isActive: Ref<boolean>) => {
       admission_at: admissionDate.value,
       contractor_id: selectedItem.value.contractor
     }
+    console.log(selectedItem);
+    
     await api.putData(`/v1/book/school/${selectedItem.value.book_school_id}`, bookSchoolForm)
     await getBooks()
     toast.success('Данные успешно обновлены')
@@ -313,12 +315,15 @@ async function getStates(search = null) {
 }
 
 async function selectItem(item) {
+  console.log(item);
+  
   const response = await api.fetchData('/v1/book/school/' + item.book_school_id)
   selectedItem.value.amount = response.data.amount
   selectedItem.value.contractor = response.data.contractor_id
   selectedItem.value.price = response.data.price
   selectedItem.value.book_admission_id = response.data.book_admission_id
   selectedItem.value.book_state_id = response.data.book_state_id
+  selectedItem.value.book_school_id = item.book_school_id
 
   const date = response.data.admission_at
   if (date) {

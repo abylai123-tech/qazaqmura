@@ -75,6 +75,11 @@ interface Book {
     company_name?: string
     street_name?: string
   }
+  content_type_id?: number
+  binding_id?: number
+  materials?: any[]
+  book_quote?: any[]
+  books_in_fund?: number
 }
 
 interface Contractor {
@@ -101,7 +106,7 @@ interface BookAdmission {
   book_id: number
   book_state_id: number | null
   price: number
-  admission_at: string
+  admission_at: string | null
   contractor_id: number | null
   book_admission_id: number | null
 }
@@ -245,9 +250,10 @@ async function getBooks() {
       requestString += `&sort=${sorting.value}`
     }
 
-    const response = await api.fetchData<{ data: { items: Book[] }; meta: { last_page: number } }>(
-      requestString
-    )
+    const response = await api.fetchData<{
+      data: { items: Book[] }
+      meta: { last_page: number; total: number }
+    }>(requestString)
 
     if (response.data) {
       items.value = response.data.data.items
@@ -375,7 +381,7 @@ function initiateQuote(item: any) {
   selectedItem.value = item
 }
 
-async function createQuote(isActive: ref<boolean>) {
+async function createQuote(isActive: Ref<boolean>) {
   try {
     newQuote.value.book_id = selectedItem.value.id
     await api.postData('/v1/quotes', newQuote.value)
@@ -553,9 +559,6 @@ function setNewItem(itemType: 'author' | 'publisher' | 'genre' | 'subjectHeading
   } else if (itemType === 'subjectHeading') {
     newItem.value.title = 'Добавление предметной рубрики'
     newItem.value.label = 'Название предметной рубрики'
-  } else if (itemType === 'contractor') {
-    newItem.value.title = 'Добавление контрагента'
-    newItem.value.label = 'Название контрагента'
   }
 
   newItem.value.name = ''
@@ -825,14 +828,28 @@ watch(page, (newValue) => {
                     <div class="text-medium-emphasis">{{ selectedItem.title2 }}</div>
                   </v-row>
                   <v-row class="mt-4">
-                    <v-chip
-                      v-for="author in selectedItem.book_author_main"
-                      :key="author.id"
-                      color="primary"
-                      variant="outlined"
-                    >
-                      {{ author.name }}
-                    </v-chip>
+                    <div class="mt-3">
+                      <div>
+                        <template
+                          v-for="(author, index) in selectedItem.book_author_main"
+                          :key="author.id"
+                        >
+                          <v-chip color="primary" variant="outlined">
+                            {{ author.name }}
+                          </v-chip>
+                        </template>
+                      </div>
+                      <div class="mt-2">
+                        <template
+                          v-for="(author, index) in selectedItem.book_author"
+                          :key="author.id"
+                        >
+                          <v-chip color="grey" variant="outlined" class="mr-1">
+                            {{ author.name }}
+                          </v-chip>
+                        </template>
+                      </div>
+                    </div>
                   </v-row>
                   <v-row class="mt-4">
                     <div>{{ selectedItem.annotation }}</div>
@@ -1242,7 +1259,7 @@ watch(page, (newValue) => {
                       >EPUB
                     </v-chip>
                     <v-btn
-                      v-if="item.book_epub && auth.user.value.roles.some((obj) => obj.id === 1)"
+                      v-if="item.book_epub && auth.user.value?.roles.some((obj) => obj.id === 1)"
                       class="ml-2"
                       color="warning"
                       rounded="xl"
@@ -1264,13 +1281,20 @@ watch(page, (newValue) => {
 
                     <div>{{ item.title2 }}</div>
                     <div class="mt-3">
-                      <v-chip
-                        v-for="author in item.book_author_main"
-                        :key="author.id"
-                        color="primary"
-                        variant="outlined"
-                        >{{ author.name }}
-                      </v-chip>
+                      <div>
+                        <template v-for="(author, index) in item.book_author_main" :key="author.id">
+                          <v-chip color="primary" variant="outlined">
+                            {{ author.name }}
+                          </v-chip>
+                        </template>
+                      </div>
+                      <div class="mt-2">
+                        <template v-for="(author, index) in item.book_author" :key="author.id">
+                          <v-chip color="grey" variant="outlined" class="mr-1">
+                            {{ author.name }}
+                          </v-chip>
+                        </template>
+                      </div>
                     </div>
                     <div class="mt-3">{{ item.annotation }}</div>
                     <div>
@@ -1411,14 +1435,30 @@ watch(page, (newValue) => {
                                             {{ item.title }}
                                           </div>
                                           <div class="mt-3">
-                                            <v-chip
-                                              v-for="author in item.book_author_main"
-                                              :key="author.id"
-                                              color="primary"
-                                              variant="outlined"
-                                            >
-                                              {{ author.name }}
-                                            </v-chip>
+                                            <div>
+                                              <template
+                                                v-for="(author, index) in item.book_author_main"
+                                                :key="author.id"
+                                              >
+                                                <v-chip color="primary" variant="outlined">
+                                                  {{ author.name }}
+                                                </v-chip>
+                                              </template>
+                                            </div>
+                                            <div class="mt-2">
+                                              <template
+                                                v-for="(author, index) in item.book_author"
+                                                :key="author.id"
+                                              >
+                                                <v-chip
+                                                  color="grey"
+                                                  variant="outlined"
+                                                  class="mr-1"
+                                                >
+                                                  {{ author.name }}
+                                                </v-chip>
+                                              </template>
+                                            </div>
                                           </div>
                                           <v-row class="mt-2">
                                             <v-col>
@@ -1607,7 +1647,7 @@ watch(page, (newValue) => {
                                     <v-btn
                                       variant="tonal"
                                       class="ml-auto mr-2"
-                                      @click="isActive = !isActive"
+                                      @click="isActive.value = !isActive.value"
                                       >Закрыть</v-btn
                                     >
                                     <v-btn
@@ -1651,14 +1691,16 @@ watch(page, (newValue) => {
                                             {{ item.title }}
                                           </div>
                                           <div class="mt-3">
-                                            <v-chip
-                                              v-for="author in item.book_author_main"
-                                              :key="author.id"
-                                              color="primary"
-                                              variant="outlined"
-                                            >
-                                              {{ author.name }}
-                                            </v-chip>
+                                            <div>
+                                              <template
+                                                v-for="(author, index) in item.book_author_main"
+                                                :key="author.id"
+                                              >
+                                                <v-chip color="primary" variant="outlined">
+                                                  {{ author.name }}
+                                                </v-chip>
+                                              </template>
+                                            </div>
                                           </div>
                                           <v-row class="mt-2">
                                             <v-col>
