@@ -685,7 +685,6 @@ const router = useRouter()
 
 async function sendBookData() {
   const body = removeNullOrEmptyFields(form.value)
-  body.author_id_main = [body.author_id_main]
   if (body.materials) body.materials = [body.materials]
   if (bbk.value) {
     body.bbk_id = bbk.value[bbk.value.length - 1].id

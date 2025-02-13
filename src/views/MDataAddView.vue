@@ -185,7 +185,20 @@ const form: Ref<Form> = ref({
   volume: null,
   materials: [],
   link: { URL: '', title: '' },
-  subject_heading_id: null
+  subject_heading_id: null,
+  discipline_id: null,
+  qualification_id: null,
+  profession_id: null,
+  specialty_id: null,
+  type_description_id: undefined,
+  marker_id: undefined,
+  creation_date: undefined,
+  creator_name: undefined,
+  copyright_holder: undefined,
+  distribution: undefined,
+  book_specials: undefined,
+  book_areas: undefined,
+  book_addresses: undefined
 })
 const admission: Ref<BookAdmission> = ref({
   amount: 0,
@@ -731,10 +744,11 @@ async function sendBookData() {
     toast.error('Пожалуйста, заполните все обязательные поля')
     return
   }
+
   const body = removeNullOrEmptyFields(form.value)
 
   if (showMaterialSpecs.value) {
-    body.book_specials = removeNullOrEmptyFields(form.value.book_specials)
+    body.book_specials = removeNullOrEmptyFields(materialSpecs.value)
   }
 
   if (showManufacturerAddress.value) {
@@ -765,8 +779,11 @@ async function sendBookData() {
 
   try {
     const response = await api.postData<Form, { id: number }>('/v1/book', body)
+    if (!response.data) {
+      throw new Error('No data received from server')
+    }
     const id = response.data.id
-    if (response.data && showFundData.value) {
+    if (showFundData.value) {
       admission.value.book_id = id
       await api.postData('/v1/book/admission', admission.value)
     }
@@ -792,12 +809,18 @@ const handleEpub = () => {
   epub.value?.click()
 }
 
-const handleEpubUpload = (event) => {
-  epubFile.value = event.target.files[0]
+const handleEpubUpload = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    epubFile.value = target.files[0]
+  }
 }
 
-const handleFile = (event) => {
-  file.value = event.target.files[0]
+const handleFile = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    file.value = target.files[0]
+  }
 }
 
 const coverPreview = computed(() => {
