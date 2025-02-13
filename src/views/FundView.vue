@@ -319,7 +319,14 @@ async function selectItem(item) {
   selectedItem.value.price = response.data.price
   selectedItem.value.book_admission_id = response.data.book_admission_id
   selectedItem.value.book_state_id = response.data.book_state_id
-  admissionDate.value = response.data.admission_at
+
+  const date = response.data.admission_at
+  if (date) {
+    const [year, month, day] = date.split('-')
+    admissionDate.value = `${day}.${month}.${year}`
+  } else {
+    admissionDate.value = ''
+  }
 }
 
 const admissionBlock: Ref<{ label: string; value: string }> = ref([])
