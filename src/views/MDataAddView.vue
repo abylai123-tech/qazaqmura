@@ -842,8 +842,8 @@ async function sendBookData() {
       await api.postData('/v1/book/cover', formData)
     }
 
-    // Upload EPUB if exists
-    if (epub.value) {
+    // Only upload EPUB if a file was selected
+    if (epubFile.value) {
       const formData = new FormData()
       formData.append('epub', epubFile.value)
       formData.append('book_id', id.toString())
