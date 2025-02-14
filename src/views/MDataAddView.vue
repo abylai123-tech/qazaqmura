@@ -13,20 +13,20 @@ const toast = useToastStore()
 
 interface Form {
   author_id: number[]
-  author_id_main: number
+  author_id_main: number | null
   bbk_id: number | null
   udk_id: number | null
   category_id: number | null
   annotation: string
-  genre_id: number[] | null
+  genre_id: number[]
+  city_id: number | null
   ISBN: string
-  language_id: number[] | null
+  language_id: number[]
   pages: number | null
   publisher_id: number | null
   quotes: string
   title: string
   title2: string
-  city_id: number
   type_id: number | null
   year: number | null
   book_classroom: number | null
@@ -114,6 +114,12 @@ interface Contractor {
   company_ID: string
   id: number
   system: boolean
+  title: string
+}
+
+interface CopyrightSign {
+  id: number
+  number: string
   title: string
 }
 
@@ -619,7 +625,7 @@ async function getCountries(search = null, forceRefresh = false) {
   }
 }
 
-const copyrightSigns: Ref<Author[]> = ref([])
+const copyrightSigns: Ref<CopyrightSign[]> = ref([])
 
 async function getCopyrightSigns(search = null) {
   try {
@@ -627,7 +633,7 @@ async function getCopyrightSigns(search = null) {
     if (search) {
       request += `?search=${search}`
     }
-    const response = await api.fetchData<{ data: { items: Author[] } }>(request)
+    const response = await api.fetchData<{ data: { items: CopyrightSign[] } }>(request)
     if (response.data) copyrightSigns.value = response.data.data.items
   } catch (error: any) {
     console.error('Error:', error.message)
@@ -826,7 +832,6 @@ async function sendBookData() {
   }
 
   try {
-    // First create the book
     const response = await api.postData<typeof bookData, { id: number }>('/v1/book', body)
     if (!response.data) {
       throw new Error('No data received from server')
@@ -834,7 +839,6 @@ async function sendBookData() {
 
     const id = response.data.id
 
-    // Upload cover if exists
     if (file.value) {
       const formData = new FormData()
       formData.append('cover', file.value)
@@ -842,12 +846,13 @@ async function sendBookData() {
       await api.postData('/v1/book/cover', formData)
     }
 
-    // Upload EPUB if exists
     if (epub.value) {
       const formData = new FormData()
-      formData.append('epub', epubFile.value)
-      formData.append('book_id', id.toString())
-      await api.postData('/v1/book/epub', formData)
+      if (epubFile.value) {
+        formData.append('epub', epubFile.value as Blob)
+        formData.append('book_id', id.toString())
+        await api.postData('/v1/book/epub', formData)
+      }
     }
 
     if (showFundData.value) {
@@ -935,7 +940,6 @@ const updateBookAddresses = () => {
   }
 }
 
-// Add a computed property for EPUB file info
 const epubFileInfo = computed(() => {
   if (epubFile.value) {
     return {
@@ -946,13 +950,12 @@ const epubFileInfo = computed(() => {
   return null
 })
 
-// Add handlers for country and city selection
 const handleCountrySelect = async () => {
-  await getCountries(null, true) // Force refresh after selection
+  await getCountries(null, true)
 }
 
 const handleCitySelect = async () => {
-  await getCities(null, true) // Force refresh after selection
+  await getCities(null, true) 
 }
 
 getAuthors()
