@@ -122,6 +122,15 @@ export function useAPI() {
     return { data: data.value, error: error.value }
   }
 
+  // async function postData<T, R>(url: string, data: T | FormData): Promise<AxiosResponse<R>> {
+  //   const headers =
+  //     data instanceof FormData
+  //       ? { 'Content-Type': 'multipart/form-data' }
+  //       : { 'Content-Type': 'application/json' }
+
+  //   return await axios.post(`${host}${url}`, data, { headers })
+  // }
+
   return {
     fetchData,
     postData,
