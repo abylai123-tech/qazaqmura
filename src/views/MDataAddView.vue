@@ -336,13 +336,22 @@ async function getAuthors(search = null, forceRefresh = false) {
   }
 }
 
-// Add handlers for author selection
-const handleMainAuthorSelect = async () => {
-  await getAuthors(null, true) // Force refresh after selection
+// Update the handleMainAuthorSelect function
+const handleMainAuthorSelect = async (value: number) => {
+  if (value) {
+    form.value.author_id_main = value
+    authorMainValid.value = true
+    authorMainError.value = false
+    await getAuthors('', true) // Force refresh after selection
+  }
 }
 
-const handleAdditionalAuthorSelect = async () => {
-  await getAuthors(null, true) // Force refresh after selection
+// Update the handleAdditionalAuthorSelect function
+const handleAdditionalAuthorSelect = async (value: number[]) => {
+  if (value) {
+    form.value.author_id = value
+    await getAuthors('', true) // Force refresh after selection
+  }
 }
 
 async function addNewItem(
@@ -955,7 +964,7 @@ const handleCountrySelect = async () => {
 }
 
 const handleCitySelect = async () => {
-  await getCities(null, true) 
+  await getCities(null, true)
 }
 
 getAuthors()
@@ -1145,12 +1154,7 @@ getContentTypes()
                     :label="'Основной автор *'"
                     :rules="[rules.required]"
                     :error="authorMainError"
-                    @update:model-value="
-                      (val) => {
-                        authorMainValid = !!val
-                        handleMainAuthorSelect()
-                      }
-                    "
+                    @update:model-value="handleMainAuthorSelect"
                     placeholder="Укажите автора"
                     variant="outlined"
                     @update:search="getAuthors"

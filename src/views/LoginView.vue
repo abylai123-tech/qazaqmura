@@ -3,7 +3,10 @@ import { ref } from 'vue'
 import { useAuth } from '@/auth/index'
 import router from '@/router'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
+
 const { t, locale } = useI18n()
+const toast = useToastStore()
 const user = ref({ login: '', password: '', device: 'web' })
 
 const loading = ref(false)
@@ -15,15 +18,32 @@ const switchLocale = (newLocale: string) => {
 }
 
 const signIn = async function () {
+  if (!user.value.login || !user.value.password) {
+    toast.error(t('please_fill_all_fields'))
+    return
+  }
+
   loading.value = true
   const auth = useAuth()
-  auth.login(user.value)
+
   try {
-    await auth.login(user.value)
+    const response = await auth.login(user.value)
     loading.value = false
-    router.push({ name: 'home' })
+
+    if (!response) {
+      toast.error(t('login_failed'))
+      return
+    }
+
+    toast.success(t('login_successful'))
+    setTimeout(() => {
+      router.push({ name: 'home' })
+    }, 1000)
   } catch (error: any) {
-    console.error('Error:', error.message)
+    loading.value = false
+    const errorMessage = error?.response?.data?.message || t('login_failed')
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 </script>
