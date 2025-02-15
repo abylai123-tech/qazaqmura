@@ -412,7 +412,7 @@ watch(page, (newValue) => {
             </v-list-item>
           </v-list>
         </v-menu>
-        <HelpButton video-id="ASELCx5TId8" />
+        <HelpButton video-id="8vUsW7Fs5M8" />
       </template>
     </v-app-bar>
 

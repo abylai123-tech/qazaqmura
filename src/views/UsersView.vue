@@ -1026,7 +1026,7 @@ const fileName = computed(() => importFile.value?.name || '')
           </v-list>
         </v-menu>
 
-        <help-button video-id="acZ_C2NBTJI" />
+        <help-button video-id="6jm7naQux44" />
       </template>
     </v-app-bar>
 

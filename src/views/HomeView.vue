@@ -1959,13 +1959,13 @@ getInventory()
                 </v-col>
               </v-row>
             </v-card-text>
-            <v-card-actions>
+            <!-- <v-card-actions>
               <v-dialog>
                 <template v-slot:activator="{ props }">
                   <v-btn color="primary" v-bind="props" variant="flat">Подробнее</v-btn>
                 </template>
               </v-dialog>
-            </v-card-actions>
+            </v-card-actions> -->
           </v-card>
         </v-col>
       </v-row>

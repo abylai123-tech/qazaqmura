@@ -990,7 +990,7 @@ getContentTypes()
       </template>
 
       <template v-slot:append>
-        <help-button video-id="fpyNAB4fvcU" class="mr-3" />
+        <help-button video-id="o1uPrDh8o5g " class="mr-3" />
         <v-btn color="primary" prepend-icon="mdi-plus" to="/m-data/add" variant="flat"
           >{{ t('add') }}
         </v-btn>

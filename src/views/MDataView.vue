@@ -776,7 +776,7 @@ watch(page, (newValue) => {
             <v-list-item @click="sorting = 'old'">{{ t('sort_new_to_old') }}</v-list-item>
           </v-list>
         </v-menu>
-        <help-button video-id="ace0cfM0jug" />
+        <help-button video-id="o1uPrDh8o5g " />
         <v-btn class="ml-3" color="primary" prepend-icon="mdi-plus" to="m-data/add" variant="flat"
           >{{ t('add') }}
         </v-btn>
