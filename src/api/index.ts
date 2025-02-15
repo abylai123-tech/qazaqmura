@@ -22,7 +22,10 @@ export function useAPI() {
       if (blob) {
         config.responseType = 'blob'
       }
-      config.headers = token.value ? { Authorization: `Bearer ${token.value.token}` } : {}
+      config.headers = {
+        'Content-Type': postData instanceof FormData ? 'multipart/form-data' : 'application/json',
+        ...(token.value ? { Authorization: `Bearer ${token.value.token}` } : {})
+      }
       const response: AxiosResponse<U> = await axios.post(host + url, postData, config)
       data.value = response.data
     } catch (err) {
