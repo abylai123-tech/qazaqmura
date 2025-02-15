@@ -137,7 +137,7 @@ watch(search, () => {
 
       <template v-slot:append>
         <v-btn class="mr-3" color="primary" variant="flat" @click="downloadList">{{ t('download_pdf') }}</v-btn>
-        <help-button video-id="nm1HScC55_E"></help-button>
+        <help-button video-id="Nhx_qLJMbKg"></help-button>
         <v-btn
           class="ml-3"
           color="primary"

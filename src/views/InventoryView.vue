@@ -468,7 +468,7 @@ watch(sort, () => {
           </v-list>
         </v-menu>
 
-        <help-button video-id="Lil4z75KxjA" class="mr-3" />
+        <help-button video-id="gWi5QPlcyLY " class="mr-3" />
       </template>
     </v-app-bar>
 
