@@ -11,10 +11,10 @@ const entities = ref([])
 const page = ref(1)
 const length = ref(1)
 const itemLimit = ref(15)
-const headers = ref([])
+const headers: Ref<{key: string, title: string}[]> = ref([])
 
 const getEntities = async (entityName: string) => {
-  const response = await api.fetchData<{ data: { items: [] } }>(
+  const response = await api.fetchData<{ data: { items: [] }, meta: { last_page: number, per_page: number } }>(
     `/v1/${entityName}?page=${page.value}`
   )
   if (response.data) {
@@ -32,7 +32,7 @@ const getEntities = async (entityName: string) => {
   }
 }
 
-const getHeaders = (item) => {
+const getHeaders = (item: never) => {
   let headers = []
   if (item) {
     let keys = Object.keys(item)
@@ -99,6 +99,10 @@ const entityTitle = computed(() => {
       return 'Ключевые слова'
     case '/material':
       return 'Обозначение материала'
+    case '/discipline':
+      return 'Дисциплина'
+    case '/qualification':
+      return 'Квалификация'
     default:
       return ''
   }
@@ -221,6 +225,12 @@ const editEntity = async (entity: any, isActive: Ref<boolean>) => {
     case '/material':
       url += 'material'
       break
+    case '/discipline':
+      url += 'discipline'
+      break
+    case '/qualification':
+      url += 'qualification'
+      break
     default:
       break
   }
@@ -286,6 +296,12 @@ const getCurrentPage = () => {
     case '/material':
       getEntities('material')
       break
+    case '/discipline':
+      getEntities('discipline')
+      break
+    case '/qualification':
+      getEntities('qualification')
+      break
     default:
       break
   }
@@ -295,13 +311,14 @@ interface Item {
   title: string
   description: string
   number: string
+  name?: string
 }
 
 const newItem = ref<Item>({ title: '', description: '', number: '' })
 
 const createEntity = async (isActive: Ref<boolean>) => {
   let url = '/v1/'
-  const entity = {}
+  const entity: { title?: string, description?: string, name?: string, label?: string, number?: string } = {}
   switch (route.path) {
     case '/publisher':
       url += 'publisher'
@@ -378,6 +395,14 @@ const createEntity = async (isActive: Ref<boolean>) => {
       url += 'material'
       entity['label'] = newItem.value.title
       break
+    case '/discipline':
+      url += 'discipline'
+      entity['title'] = newItem.value.title
+      break
+    case '/qualification':
+      url += 'qualification'
+      entity['title'] = newItem.value.title
+      break
     default:
       break
   }
@@ -386,7 +411,8 @@ const createEntity = async (isActive: Ref<boolean>) => {
   newItem.value = {
     title: '',
     name: '',
-    description: ''
+    description: '',
+    number: ''
   }
   getCurrentPage()
 }

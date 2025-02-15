@@ -22,7 +22,10 @@ export function useAPI() {
       if (blob) {
         config.responseType = 'blob'
       }
-      config.headers = token.value ? { Authorization: `Bearer ${token.value.token}` } : {}
+      config.headers = {
+        'Content-Type': postData instanceof FormData ? 'multipart/form-data' : 'application/json',
+        ...(token.value ? { Authorization: `Bearer ${token.value.token}` } : {})
+      }
       const response: AxiosResponse<U> = await axios.post(host + url, postData, config)
       data.value = response.data
     } catch (err) {
@@ -31,7 +34,6 @@ export function useAPI() {
 
     return { data: data.value, error: error.value }
   }
-
 
   async function fetchData<T>(url: string): Promise<ApiResponse<T>> {
     // const t = useI18n()
@@ -60,15 +62,13 @@ export function useAPI() {
         responseType: 'blob',
         headers: { Authorization: `Bearer ${token.value?.token}` },
         data: body
-      });
+      })
 
-      return response;
+      return response
     } catch (error) {
-      console.error('Error downloading the PDF:', error);
+      console.error('Error downloading the PDF:', error)
     }
   }
-
-  
 
   async function deleteData<U>(url: string): Promise<ApiResponse<U>> {
     const data: Ref<U | null> = ref(null)
@@ -121,6 +121,15 @@ export function useAPI() {
 
     return { data: data.value, error: error.value }
   }
+
+  // async function postData<T, R>(url: string, data: T | FormData): Promise<AxiosResponse<R>> {
+  //   const headers =
+  //     data instanceof FormData
+  //       ? { 'Content-Type': 'multipart/form-data' }
+  //       : { 'Content-Type': 'application/json' }
+
+  //   return await axios.post(`${host}${url}`, data, { headers })
+  // }
 
   return {
     fetchData,

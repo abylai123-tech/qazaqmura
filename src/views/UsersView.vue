@@ -6,7 +6,10 @@ import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
+const auth = useAuth()
+const toast = useToastStore()
 
 interface User {
   id: number
@@ -19,6 +22,13 @@ interface User {
   activated_at: string
   last_used_at: string
   status: boolean
+  roles: { id: number; title: string }[]
+  user_id: number
+  classroom?: string
+  subscription?: {
+    request: string
+    return: string
+  }
 }
 
 interface RequestBody {
@@ -140,9 +150,18 @@ const page: Ref<number> = ref(1)
 const length: Ref<number> = ref(1)
 const items: Ref<User[]> = ref([])
 const drawer: Ref<boolean> = ref(false)
-const importFile: Ref<File[] | undefined> = ref(undefined)
+const importFile: Ref<File | null> = ref(null)
+const fileInput: Ref<HTMLInputElement | null> = ref(null)
 const createDrawer: Ref<boolean> = ref(false)
 const addContactPerson: Ref<boolean> = ref(false)
+const specialties = ref([])
+const isCollege = ref(false)
+watch(auth.userData, (value) => {
+  console.log('User Data:', value)
+  if (value && value.school.organization && value.school.organization.id === 3) {
+    isCollege.value = true
+  }
+})
 const addStructure: Ref<boolean> = ref(false)
 const userRelative: Ref<{ id: number; title: string }[]> = ref([])
 const roles: Ref<{ id: number; title: string }[]> = ref([])
@@ -152,6 +171,17 @@ async function getRelatives() {
     const response = await api.fetchData('/v1/user/relative')
     if (response.data) {
       userRelative.value = response.data.data.items
+    }
+  } catch (e) {
+    console.error('Error:', e)
+  }
+}
+
+async function getSpecialties() {
+  try {
+    const response = await api.fetchData('/v1/specialty')
+    if (response.data) {
+      specialties.value = response.data.data.items
     }
   } catch (e) {
     console.error('Error:', e)
@@ -189,24 +219,40 @@ async function getUsers() {
     }
     loading.value = false
   } catch (error: any) {
-    console.error('Error:', error.message)
+    let errorMessage = error?.message || 'Ошибка при загрузке пользователей'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
 const snackbar = ref(false)
 
+const handleFileUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    importFile.value = target.files[0]
+  }
+}
+
 async function sendFile() {
   try {
     if (importFile.value) {
       const formData = new FormData()
-      formData.append('file', importFile.value[0])
+      formData.append('file', importFile.value)
       const response = await api.postData('/v2/user/excel', formData)
       if (response.data && response.data.success) {
         snackbar.value = true
         drawer.value = false
+        await getUsers()
       }
     }
   } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при загрузке файла'
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }
@@ -281,6 +327,7 @@ const getLettersAndNumbers = async () => {
 getUsers()
 getRelatives()
 getRoles()
+getSpecialties()
 getSubscriptionBlock()
 getLettersAndNumbers()
 
@@ -296,8 +343,6 @@ function formatDate(dateToFormat: string) {
 
   return `${day}.${month}.${year}`
 }
-
-const auth = useAuth()
 
 const createUser = async () => {
   try {
@@ -320,12 +365,12 @@ const createUser = async () => {
     if (organization.value) request['school_id'] = organization.value.id
 
     const response = await api.postData('/v1/user', request)
-    if (response.data && addStructure.value) {
+    if (response.data && addStructure.value && !isCollege.value) {
       classroom.value.pupil_id = response.data.id
       classroom.value.user_id = auth.user.value.id
 
       await api.postData('/v1/classroom/user', classroom.value)
-
+      toast.success('Пользователь успешно добавлен')
       createDrawer.value = false
       await getUsers()
 
@@ -354,7 +399,12 @@ const createUser = async () => {
       }
     }
     createDrawer.value = false
-  } catch (e) {
+  } catch (e: any) {
+    let errorMessage = 'Ошибка при создании пользователя'
+    if (e.response?.data?.message) {
+      errorMessage = e.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', e)
   }
 }
@@ -381,7 +431,8 @@ const getSchools = async () => {
         structureItem.classrooms = await getClassroom(structureItem.id)
       })
     })
-  } catch (e) {
+  } catch (e: any) {
+    toast.error('Ошибка при загрузке списка школ')
     console.error('Error:', e)
   }
 }
@@ -412,10 +463,18 @@ const role = computed(() => {
 })
 
 const downloadList = async (id?: number) => {
-  let url = '/v1/user/user/pdf'
-  if (id) url += `?role_id=${id}`
-  const response = await api.postData(url, null, true)
-  if (response.data) fileDownload(response.data, 'users.pdf')
+  try {
+    let url = '/v1/user/user/pdf'
+    if (id) url += `?role_id=${id}`
+    const response = await api.postData(url, null, true)
+    if (response.data) {
+      fileDownload(response.data, 'users.pdf')
+      toast.success('Список пользователей успешно скачан')
+    }
+  } catch (error: any) {
+    toast.error('Ошибка при скачивании списка пользователей')
+    console.error('Error:', error)
+  }
 }
 
 const getFilterSearch = () => {
@@ -515,6 +574,9 @@ watch(childRegion, async (value) => {
 getSchools()
 getRegions()
 getOrganizations()
+
+// Add this computed property
+const fileName = computed(() => importFile.value?.name || '')
 </script>
 
 <template>
@@ -535,13 +597,30 @@ getOrganizations()
         >
       </v-list-item>
       <v-list-item>
-        <v-file-input v-model="importFile" label="Файл" show-size></v-file-input>
-        <small class="font-weight-bold">Перетащите файл сюда или нажмите, чтобы загрузить</small
-        ><br />
-        <small>Максимальный размер файла: 300 MB</small>
+        <div class="d-flex flex-column">
+          <div v-if="fileName" class="text-body-1 mb-2">{{ fileName }}</div>
+          <input
+            ref="fileInput"
+            accept=".xlsx, .xls"
+            style="display: none"
+            type="file"
+            @input="handleFileChange"
+          />
+          <div class="d-flex align-center">
+            <v-btn color="primary" variant="outlined" class="mr-2" @click="handleFileUpload">
+              {{ t('select_file') }}
+            </v-btn>
+            <small>Максимальный размер файла: 300 MB</small>
+          </div>
+          <small class="font-weight-bold mt-2"
+            >Перетащите файл сюда или нажмите, чтобы загрузить</small
+          >
+        </div>
       </v-list-item>
       <v-list-item class="mt-2 text-center">
-        <v-btn color="primary" variant="flat" @click="sendFile">{{ t('send') }}</v-btn>
+        <v-btn color="primary" variant="flat" :disabled="!importFile" @click="sendFile">
+          {{ t('send') }}
+        </v-btn>
       </v-list-item>
     </v-navigation-drawer>
 
@@ -588,7 +667,7 @@ getOrganizations()
           <v-autocomplete
             v-if="
               requestBody.role &&
-              requestBody.role.id === 3 &&
+              (requestBody.role.id === 3 || requestBody.role.id === 10) &&
               role &&
               role.some((item) => {
                 return item.id === 1
@@ -712,6 +791,7 @@ getOrganizations()
           color="primary"
           :label="t('structure')"
         ></v-switch>
+        <v-switch v-model="isCollege" class="ml-2" color="primary" label="Колледж"></v-switch>
       </v-list-item>
 
       <v-list-item v-if="addContactPerson">
@@ -747,7 +827,7 @@ getOrganizations()
 
       <v-list-item v-if="addStructure">
         <div class="font-weight-bold">{{ t('structure') }}</div>
-        <div class="d-flex">
+        <div v-if="!isCollege" class="d-flex">
           <v-select
             v-model="classroom.number"
             :items="numbers"
@@ -762,6 +842,24 @@ getOrganizations()
             class="ml-4 mt-2"
             clearable
             label="Буква класса"
+            variant="outlined"
+          ></v-select>
+        </div>
+        <div v-else class="d-flex">
+          <v-select
+            class="mt-2"
+            clearable
+            :items="[1, 2, 3, 4]"
+            label="Курс"
+            variant="outlined"
+          ></v-select>
+          <v-select
+            :items="specialties"
+            item-value="id"
+            item-title="title"
+            class="ml-4 mt-2"
+            clearable
+            label="Специальность"
             variant="outlined"
           ></v-select>
         </div>
@@ -928,7 +1026,7 @@ getOrganizations()
           </v-list>
         </v-menu>
 
-        <help-button video-id="acZ_C2NBTJI" />
+        <help-button video-id="6jm7naQux44" />
       </template>
     </v-app-bar>
 
@@ -955,30 +1053,6 @@ getOrganizations()
       class="mt-2"
       show-select
     >
-      <!--      <template v-slot:top>-->
-      <!--        <div class="d-flex my-3 mx-4">-->
-      <!--          <v-text-field-->
-      <!--            class="rounded-xl"-->
-      <!--            density="compact"-->
-      <!--            flat-->
-      <!--            hide-details-->
-      <!--            label="Поиск по ИИН / ФИО"-->
-      <!--            prepend-inner-icon="mdi-magnify"-->
-      <!--            single-line-->
-      <!--            variant="outlined"-->
-      <!--          ></v-text-field>-->
-      <!--          <v-spacer></v-spacer>-->
-      <!--          <v-select-->
-      <!--            :items="['Показывать по 10']"-->
-      <!--            density="compact"-->
-      <!--            flat-->
-      <!--            hide-details-->
-      <!--            single-line-->
-      <!--            value="Показывать по 10"-->
-      <!--          ></v-select>-->
-      <!--        </div>-->
-      <!--      </template>-->
-
       <template v-slot:[`item.name`]="{ item }">
         <div class="d-flex flex-column my-2">
           <div>

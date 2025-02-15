@@ -1,32 +1,35 @@
 <script lang="ts" setup>
-import { computed, ref, type Ref } from 'vue'
+import { computed, ref, type Ref, onUnmounted } from 'vue'
 import { useAPI } from '@/api'
 import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import BkDialog from '@/components/bkDialog.vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useToastStore } from '@/stores/toast'
+import { useBookStore } from '@/stores/book'
 const { t } = useI18n()
 const api = useAPI()
 const toast = useToastStore()
+const route = useRoute()
+const bookStore = useBookStore()
 
 interface Form {
   author_id: number[]
-  author_id_main: number | null
+  author_id_main: number[]
   bbk_id: number | null
   udk_id: number | null
   category_id: number | null
   annotation: string
-  genre_id: number[]
-  city_id: number | null
+  genre_id: number[] | null
   ISBN: string
-  language_id: number[]
+  language_id: number[] | null
   pages: number | null
   publisher_id: number | null
   quotes: string
   title: string
   title2: string
+  city_id: number
   type_id: number | null
   year: number | null
   book_classroom: number | null
@@ -40,8 +43,8 @@ interface Form {
   education_level_id: number | null
   reprint_book_id: number[] | null
   reprint_publisher_id: number[] | null
-  titles: { language_id: number; title: string; title2?: string }[]
-  tags: number[]
+  titles: { language_id: number; title: string }[]
+  tags: number[] | null
   part: number | null
   volume: number | null
   materials: number[]
@@ -51,12 +54,12 @@ interface Form {
   qualification_id: number | null
   profession_id: number | null
   specialty_id: number | null
-  type_description_id?: number
-  marker_id?: number
-  creation_date?: string
-  creator_name?: string
-  copyright_holder?: string
-  distribution?: string
+  distribution: string
+  copyright_holder: string
+  creator_name: string
+  creation_date: string
+  marker_id: string
+  type_description_id: string
   book_specials?: {
     sizes?: string
     material_info?: string
@@ -117,20 +120,15 @@ interface Contractor {
   title: string
 }
 
-interface CopyrightSign {
-  id: number
-  number: string
-  title: string
-}
-
 const valid: Ref<boolean> = ref(false)
-const showAdditionalData: Ref<boolean> = ref(false)
-const showFundData: Ref<boolean> = ref(false)
+const showAdditionalData: Ref<boolean> = ref(true)
+const showFundData: Ref<boolean> = ref(true)
 const authors: Ref<Author[]> = ref([])
 const publishers: Ref<Publisher[]> = ref([])
 const cities: Ref<Publisher[]> = ref([])
 const types: Ref<Publisher[]> = ref([])
 const languages: Ref<Publisher[]> = ref([])
+const additionalAuthors: Ref<boolean> = ref(false)
 const contractors: Ref<Contractor[]> = ref([])
 const qualifications: Ref<any[]> = ref([])
 const specialties: Ref<any[]> = ref([])
@@ -157,7 +155,7 @@ const parts = [
 const auth = useAuth()
 const form: Ref<Form> = ref({
   author_id: [],
-  author_id_main: null,
+  author_id_main: [],
   bbk_id: null,
   udk_id: null,
   category_id: null,
@@ -191,19 +189,15 @@ const form: Ref<Form> = ref({
   materials: [],
   link: { URL: '', title: '' },
   subject_heading_id: null,
-  discipline_id: null,
-  qualification_id: null,
-  profession_id: null,
-  specialty_id: null,
-  type_description_id: undefined,
-  marker_id: undefined,
-  creation_date: undefined,
-  creator_name: undefined,
-  copyright_holder: undefined,
-  distribution: undefined,
-  book_specials: undefined,
-  book_areas: undefined,
-  book_addresses: undefined
+  distribution: '',
+  copyright_holder: '',
+  creator_name: '',
+  creation_date: '',
+  marker_id: '',
+  type_description_id: '',
+  book_specials: {},
+  book_areas: {},
+  book_addresses: {}
 })
 const admission: Ref<BookAdmission> = ref({
   amount: 0,
@@ -220,7 +214,7 @@ const newItem: Ref<{
   title: string
   active: boolean
   label: string
-  itemType: 'author' | 'publisher' | 'genre' | 'subjectHeading' | 'contractor' | 'tag'
+  itemType: 'author' | 'publisher' | 'genre' | 'subjectHeading' | 'contractor' | null
   companyId?: string
   address?: string
 }> = ref({
@@ -228,7 +222,7 @@ const newItem: Ref<{
   active: false,
   title: '',
   label: '',
-  itemType: 'author'
+  itemType: null
 })
 
 const showAdditionalParams = ref(false)
@@ -271,62 +265,29 @@ const seriesArea = ref({
   issn: ''
 })
 
-const rules = {
-  required: (v: any) => !!v || 'Поле обязательно для заполнения'
-}
-
-const titleValid = ref(false)
-const annotationValid = ref(false)
-const pagesValid = ref(false)
-const yearValid = ref(false)
-const authorMainValid = ref(false)
-const publisherValid = ref(false)
-const typeValid = ref(false)
-const languageValid = ref(false)
-const materialsValid = ref(false)
-const tagsValid = ref(false)
-const bbkValid = ref(false)
-const udkValid = ref(false)
-
-const isFormValid = computed(() => {
-  return (
-    titleValid.value &&
-    annotationValid.value &&
-    pagesValid.value &&
-    yearValid.value &&
-    authorMainValid.value &&
-    publisherValid.value &&
-    typeValid.value &&
-    languageValid.value &&
-    materialsValid.value &&
-    tagsValid.value &&
-    bbkValid.value &&
-    udkValid.value
-  )
+const epubFileInfo = computed(() => {
+  if (epubFile.value) {
+    return {
+      name: epubFile.value.name,
+      size: (epubFile.value.size / (1024 * 1024)).toFixed(2) + ' MB'
+    }
+  }
+  return null
 })
 
-// Add a new ref to track if form was submitted
-const formSubmitted = ref(false)
+const handleCountrySelect = async () => {
+  await getCountries(null, true)
+}
 
-// Update the error computed properties to show errors after form submission
-const titleError = computed(() => formSubmitted.value && !titleValid.value)
-const annotationError = computed(() => formSubmitted.value && !annotationValid.value)
-const pagesError = computed(() => formSubmitted.value && !pagesValid.value)
-const yearError = computed(() => formSubmitted.value && !yearValid.value)
-const authorMainError = computed(() => formSubmitted.value && !authorMainValid.value)
-const publisherError = computed(() => formSubmitted.value && !publisherValid.value)
-const typeError = computed(() => formSubmitted.value && !typeValid.value)
-const languageError = computed(() => formSubmitted.value && !languageValid.value)
-const materialsError = computed(() => formSubmitted.value && !materialsValid.value)
-const tagsError = computed(() => formSubmitted.value && !tagsValid.value)
-const bbkError = computed(() => formSubmitted.value && !bbkValid.value)
-const udkError = computed(() => formSubmitted.value && !udkValid.value)
+const handleCitySelect = async () => {
+  await getCities(null, true)
+}
 
-async function getAuthors(search = null, forceRefresh = false) {
+async function getAuthors(search = null) {
   try {
     let request = `/v1/author`
-    if (search || forceRefresh) {
-      request += `?search=${search || ''}`
+    if (search) {
+      request += `?search=${search}`
     }
     const response = await api.fetchData<{ data: { items: Author[] } }>(request)
     if (response.data) authors.value = response.data.data.items
@@ -334,15 +295,6 @@ async function getAuthors(search = null, forceRefresh = false) {
     toast.error('Ошибка при загрузке списка авторов')
     console.error('Error:', error.message)
   }
-}
-
-// Add handlers for author selection
-const handleMainAuthorSelect = async () => {
-  await getAuthors(null, true) // Force refresh after selection
-}
-
-const handleAdditionalAuthorSelect = async () => {
-  await getAuthors(null, true) // Force refresh after selection
 }
 
 async function addNewItem(
@@ -595,7 +547,7 @@ async function getSubjectHeadings(search = null) {
   }
 }
 
-const tags: Ref<Author[]> = ref([])
+const tags = ref([])
 
 async function getTags(search = null) {
   try {
@@ -610,7 +562,7 @@ async function getTags(search = null) {
   }
 }
 
-const countries: Ref<Author[]> = ref([])
+const countries = ref([])
 
 async function getCountries(search = null, forceRefresh = false) {
   try {
@@ -625,7 +577,7 @@ async function getCountries(search = null, forceRefresh = false) {
   }
 }
 
-const copyrightSigns: Ref<CopyrightSign[]> = ref([])
+const copyrightSigns = ref([])
 
 async function getCopyrightSigns(search = null) {
   try {
@@ -633,7 +585,7 @@ async function getCopyrightSigns(search = null) {
     if (search) {
       request += `?search=${search}`
     }
-    const response = await api.fetchData<{ data: { items: CopyrightSign[] } }>(request)
+    const response = await api.fetchData<{ data: { items: Author[] } }>(request)
     if (response.data) copyrightSigns.value = response.data.data.items
   } catch (error: any) {
     console.error('Error:', error.message)
@@ -653,21 +605,14 @@ async function getAgeCharacteristics(search = null) {
   }
 }
 
-interface BKItem {
-  id: number
-  title: string
-}
-
-const bbk: Ref<BKItem[]> = ref([])
-const udk: Ref<BKItem[]> = ref([])
+const bbk = ref(null)
+const udk = ref(null)
 
 const handleFinish = (value: any, mode: 'bbk' | 'udk') => {
   if (mode === 'bbk') {
     bbk.value = value
-    bbkValid.value = !!value
   } else {
     udk.value = value
-    udkValid.value = !!value
   }
 }
 
@@ -757,73 +702,12 @@ function setNewItem(
 const router = useRouter()
 
 async function sendBookData() {
-  formSubmitted.value = true
+  const body = removeNullOrEmptyFields(form.value)
 
-  if (!isFormValid.value) {
-    toast.error('Пожалуйста, заполните все обязательные поля')
-    return
+  if (body.materials) {
+    body.materials = Array.isArray(body.materials) ? body.materials : [body.materials]
   }
 
-  const bookData = {
-    title: form.value.title,
-    annotation: form.value.annotation,
-    author_id_main: [form.value.author_id_main],
-    language_id: form.value.language_id,
-    materials: Array.isArray(form.value.materials) ? form.value.materials : [form.value.materials],
-    pages: form.value.pages,
-    publisher_id: form.value.publisher_id,
-    type_id: form.value.type_id,
-    year: form.value.year,
-    link: form.value.link,
-    bbk_id: bbk.value?.[bbk.value.length - 1]?.id,
-    udk_id: udk.value?.[udk.value.length - 1]?.id
-  }
-
-  const body = removeNullOrEmptyFields(bookData)
-
-  if (showMaterialSpecs.value) {
-    body.book_specials = removeNullOrEmptyFields(materialSpecs.value)
-  }
-
-  if (showManufacturerAddress.value) {
-    const addresses: any = {}
-
-    if (manufacturerAddress.value.country) {
-      addresses.country_id = manufacturerAddress.value.country
-    }
-    if (manufacturerAddress.value.city) {
-      addresses.city_id = manufacturerAddress.value.city
-    }
-    if (manufacturerAddress.value.postalCode) {
-      addresses.postal_index = manufacturerAddress.value.postalCode
-    }
-    if (manufacturerAddress.value.street) {
-      addresses.street_name = manufacturerAddress.value.street
-    }
-    if (manufacturerAddress.value.houseNumber) {
-      addresses.number = manufacturerAddress.value.houseNumber
-    }
-    if (manufacturerAddress.value.company) {
-      addresses.company_name = manufacturerAddress.value.company
-    }
-
-    form.value.book_addresses = addresses
-  }
-
-  if (showSeriesArea.value) {
-    body.book_areas = {
-      heading_id: seriesArea.value.mainTitle ? 1 : undefined,
-      additional_info: seriesArea.value.titleInfo,
-      responsibility_info: seriesArea.value.responsibilityInfo.first,
-      first_info: seriesArea.value.responsibilityInfo.first,
-      next_info: seriesArea.value.responsibilityInfo.subsequent,
-      ISSN: seriesArea.value.issn,
-      number: seriesArea.value.issueNumber
-    }
-    body.book_areas = removeNullOrEmptyFields(body.book_areas)
-  }
-
-  body.author_id = form.value.author_id
   if (bbk.value) {
     body.bbk_id = bbk.value[bbk.value.length - 1].id
   }
@@ -832,40 +716,18 @@ async function sendBookData() {
   }
 
   try {
-    const response = await api.postData<typeof bookData, { id: number }>('/v1/book', body)
-    if (!response.data) {
-      throw new Error('No data received from server')
-    }
-
+    const response = await api.postData<Form, { id: number }>('/v1/book', body)
     const id = response.data.id
-
-    if (file.value) {
-      const formData = new FormData()
-      formData.append('cover', file.value)
-      formData.append('book_id', id.toString())
-      await api.postData('/v1/book/cover', formData)
-    }
-
-    if (epub.value) {
-      const formData = new FormData()
-      if (epubFile.value) {
-        formData.append('epub', epubFile.value as Blob)
-        formData.append('book_id', id.toString())
-        await api.postData('/v1/book/epub', formData)
-      }
-    }
-
-    if (showFundData.value) {
+    if (response.data && showFundData.value) {
       admission.value.book_id = id
       await api.postData('/v1/book/admission', admission.value)
     }
-
     toast.success('Запись успешно добавлена')
     router.push('/m-data')
   } catch (error: any) {
-    let errorMessage = error.message || 'Произошла ошибка при добавлении записи. Попробуйте еще раз'
+    let errorMessage = error?.message || 'Ошибка при добавлении книги в фонд'
     toast.error(errorMessage)
-    console.error('Error:', error.message)
+    console.error('Error:', error)
   }
 }
 
@@ -882,18 +744,12 @@ const handleEpub = () => {
   epub.value?.click()
 }
 
-const handleEpubUpload = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files) {
-    epubFile.value = target.files[0]
-  }
+const handleEpubUpload = (event) => {
+  epubFile.value = event.target.files[0]
 }
 
-const handleFile = (event: Event) => {
-  const target = event.target as HTMLInputElement
-  if (target.files) {
-    file.value = target.files[0]
-  }
+const handleFile = (event) => {
+  file.value = event.target.files[0]
 }
 
 const coverPreview = computed(() => {
@@ -903,59 +759,13 @@ const coverPreview = computed(() => {
   return null
 })
 
-const updateBookSpecials = () => {
-  if (showMaterialSpecs.value) {
-    form.value.book_specials = {
-      sizes: materialSpecs.value.size,
-      material_info: materialSpecs.value.accompanyingMaterial,
-      additional_info: materialSpecs.value.otherPhysicalDetails
+function initializeFromStore() {
+  if (bookStore.bookData) {
+    form.value = {
+      ...form.value,
+      ...bookStore.bookData
     }
   }
-}
-
-const updateBookAddresses = () => {
-  if (showManufacturerAddress.value) {
-    const addresses: any = {}
-
-    if (manufacturerAddress.value.country) {
-      addresses.country_id = manufacturerAddress.value.country
-    }
-    if (manufacturerAddress.value.city) {
-      addresses.city_id = manufacturerAddress.value.city
-    }
-    if (manufacturerAddress.value.postalCode) {
-      addresses.postal_index = manufacturerAddress.value.postalCode
-    }
-    if (manufacturerAddress.value.street) {
-      addresses.street_name = manufacturerAddress.value.street
-    }
-    if (manufacturerAddress.value.houseNumber) {
-      addresses.number = manufacturerAddress.value.houseNumber
-    }
-    if (manufacturerAddress.value.company) {
-      addresses.company_name = manufacturerAddress.value.company
-    }
-
-    form.value.book_addresses = addresses
-  }
-}
-
-const epubFileInfo = computed(() => {
-  if (epubFile.value) {
-    return {
-      name: epubFile.value.name,
-      size: (epubFile.value.size / (1024 * 1024)).toFixed(2) + ' MB'
-    }
-  }
-  return null
-})
-
-const handleCountrySelect = async () => {
-  await getCountries(null, true)
-}
-
-const handleCitySelect = async () => {
-  await getCities(null, true) 
 }
 
 getAuthors()
@@ -977,6 +787,11 @@ getAgeCharacteristics()
 getGenres()
 getBindings()
 getContentTypes()
+initializeFromStore()
+
+onUnmounted(() => {
+  bookStore.clearBookData()
+})
 </script>
 
 <template>
@@ -990,7 +805,7 @@ getContentTypes()
       </template>
 
       <template v-slot:append>
-        <help-button video-id="o1uPrDh8o5g " class="mr-3" />
+        <help-button video-id="8vUsW7Fs5M8 " class="mr-3" />
         <v-btn color="primary" prepend-icon="mdi-plus" to="/m-data/add" variant="flat"
           >{{ t('add') }}
         </v-btn>
@@ -1017,11 +832,8 @@ getContentTypes()
                   <v-col>
                     <v-text-field
                       v-model="form.title"
-                      :label="t('name') + ' *'"
+                      :label="t('name')"
                       placeholder="Напишите название"
-                      :rules="[rules.required]"
-                      :error="titleError"
-                      @update:model-value="titleValid = $event?.length > 0"
                       required
                       variant="outlined"
                     ></v-text-field>
@@ -1082,11 +894,8 @@ getContentTypes()
                   <v-col>
                     <v-textarea
                       v-model="form.annotation"
-                      :label="'Аннотация *'"
+                      label="Аннотация"
                       placeholder="Напишите более 15 слов"
-                      :rules="[rules.required]"
-                      :error="annotationError"
-                      @update:model-value="annotationValid = !!$event"
                       variant="outlined"
                     ></v-textarea>
                   </v-col>
@@ -1096,12 +905,9 @@ getContentTypes()
                   <v-col>
                     <v-text-field
                       v-model="form.pages"
-                      :label="'Страницы *'"
+                      label="Страницы"
                       placeholder="Укажите"
                       type="number"
-                      :rules="[rules.required]"
-                      :error="pagesError"
-                      @update:model-value="pagesValid = !!$event"
                       variant="outlined"
                     ></v-text-field>
                   </v-col>
@@ -1109,12 +915,10 @@ getContentTypes()
                   <v-col>
                     <v-text-field
                       v-model="form.year"
-                      :label="t('year_of_publication') + ' *'"
+                      :label="t('year_of_publication')"
                       placeholder="Укажите"
+                      prepend-inner-icon="mdi-magnify"
                       type="number"
-                      :rules="[rules.required]"
-                      :error="yearError"
-                      @update:model-value="yearValid = !!$event"
                       variant="outlined"
                     ></v-text-field>
                   </v-col>
@@ -1142,25 +946,16 @@ getContentTypes()
                     :items="authors"
                     item-title="name"
                     item-value="id"
-                    :label="'Основной автор *'"
-                    :rules="[rules.required]"
-                    :error="authorMainError"
-                    @update:model-value="
-                      (val) => {
-                        authorMainValid = !!val
-                        handleMainAuthorSelect()
-                      }
-                    "
+                    label="Основной автор"
                     placeholder="Укажите автора"
                     variant="outlined"
                     @update:search="getAuthors"
-                    :multiple="false"
                   >
                     <template v-slot:no-data>
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного автора нет в списке</span>
-                        <v-btn color="primary" variant="flat" @click="setNewItem('author')">
-                          {{ t('add') }}
+                        <v-btn color="primary" variant="flat" @click="setNewItem('author')"
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
@@ -1168,7 +963,7 @@ getContentTypes()
                 </v-col>
               </v-row>
 
-              <v-row>
+              <v-row v-if="additionalAuthors">
                 <v-col>
                   <v-autocomplete
                     v-model="form.author_id"
@@ -1180,18 +975,45 @@ getContentTypes()
                     placeholder="Укажите автора"
                     variant="outlined"
                     @update:search="getAuthors"
-                    @update:model-value="handleAdditionalAuthorSelect"
-                    :clearable="true"
                   >
                     <template v-slot:no-data>
                       <div class="px-4 d-flex justify-space-between align-center">
                         <span>Данного автора нет в списке</span>
-                        <v-btn color="primary" variant="flat" @click="setNewItem('author')">
-                          {{ t('add') }}
+                        <v-btn color="primary" variant="flat" @click="setNewItem('author')"
+                          >{{ t('add') }}
                         </v-btn>
                       </div>
                     </template>
                   </v-autocomplete>
+                </v-col>
+              </v-row>
+
+              <v-row v-if="!additionalAuthors">
+                <v-col>
+                  <v-btn
+                    color="primary"
+                    prepend-icon="mdi-plus"
+                    variant="outlined"
+                    @click="additionalAuthors = true"
+                  >
+                    Добавить других авторов
+                  </v-btn>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col>
+                  <v-autocomplete
+                    v-model="form.qualification_id"
+                    :items="qualifications"
+                    item-title="title"
+                    item-value="id"
+                    label="Квалификация"
+                    placeholder="Поиск"
+                    prepend-inner-icon="mdi-magnify"
+                    variant="outlined"
+                    @update:search="getQualifications"
+                  ></v-autocomplete>
                 </v-col>
               </v-row>
 
@@ -1246,11 +1068,9 @@ getContentTypes()
                     v-model="form.publisher_id"
                     :items="publishers"
                     item-value="id"
-                    :label="t('publisher') + ' *'"
-                    :rules="[rules.required]"
-                    :error="publisherError"
-                    @update:model-value="publisherValid = !!$event"
+                    :label="t('publisher')"
                     placeholder="Укажите издателя"
+                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                     @update:search="getPublishers"
                   >
@@ -1293,11 +1113,9 @@ getContentTypes()
                     v-model="form.type_id"
                     :items="types"
                     item-value="id"
-                    :label="t('type') + ' *'"
-                    :rules="[rules.required]"
-                    :error="typeError"
-                    @update:model-value="typeValid = !!$event"
+                    :label="t('type')"
                     placeholder="Поиск"
+                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                   ></v-autocomplete>
                 </v-col>
@@ -1309,12 +1127,10 @@ getContentTypes()
                     v-model="form.language_id"
                     :items="languages"
                     item-value="id"
-                    :label="t('language') + ' *'"
-                    :rules="[rules.required]"
-                    :error="languageError"
-                    @update:model-value="languageValid = !!$event"
+                    :label="t('language')"
                     multiple
                     placeholder="Поиск"
+                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                   ></v-autocomplete>
                 </v-col>
@@ -1325,11 +1141,9 @@ getContentTypes()
                     chips
                     item-title="label"
                     item-value="id"
-                    :label="'Обозначение материала *'"
-                    :rules="[rules.required]"
-                    :error="materialsError"
-                    @update:model-value="materialsValid = !!$event"
+                    label="Обозначение материала"
                     placeholder="Поиск"
+                    prepend-inner-icon="mdi-magnify"
                     variant="outlined"
                   ></v-autocomplete>
                 </v-col>
@@ -1378,12 +1192,11 @@ getContentTypes()
                     chips
                     item-title="label"
                     item-value="id"
-                    :label="'Ключевые слова *'"
-                    :rules="[rules.required]"
-                    :error="tagsError"
-                    @update:model-value="tagsValid = !!$event"
+                    label="Ключевые слова"
                     multiple
                     placeholder="Поиск"
+                    prepend-inner-icon="mdi-magnify"
+                    return-object
                     variant="outlined"
                     @update:search="getTags"
                   >
@@ -1403,31 +1216,17 @@ getContentTypes()
                 <v-col>
                   <div class="d-flex">
                     <div class="d-flex flex-column w-50">
-                      <span class="mb-2" :class="{ 'error-text': formSubmitted && !bbkValid }"
-                        >ББК *</span
-                      >
-                      <div>
-                        <bk-dialog mode="bbk" @finish="handleFinish($event, 'bbk')"></bk-dialog>
-                      </div>
+                      <span class="mb-2">ББК</span>
+                      <bk-dialog mode="bbk" @finish="handleFinish($event, 'bbk')"></bk-dialog>
                       <div v-if="bbk" class="mt-2 font-weight-bold">
                         {{ bbk.map((item) => item.title).join(', ') }}
                       </div>
-                      <div v-if="formSubmitted && !bbkValid" class="error-text mt-1">
-                        Поле обязательно для заполнения
-                      </div>
                     </div>
                     <div class="d-flex flex-column ml-4 w-50">
-                      <span class="mb-2" :class="{ 'error-text': formSubmitted && !udkValid }"
-                        >УДК *</span
-                      >
-                      <div>
-                        <bk-dialog mode="udk" @finish="handleFinish($event, 'udk')"></bk-dialog>
-                      </div>
+                      <span class="mb-2">УДК</span>
+                      <bk-dialog mode="udk" @finish="handleFinish($event, 'udk')"></bk-dialog>
                       <div v-if="udk" class="mt-2 font-weight-bold">
                         {{ udk.map((item) => item.title).join(', ') }}
-                      </div>
-                      <div v-if="formSubmitted && !udkValid" class="error-text mt-1">
-                        Поле обязательно для заполнения
                       </div>
                     </div>
                   </div>
@@ -1711,38 +1510,6 @@ getContentTypes()
               <v-row>
                 <v-col>
                   <v-checkbox
-                    v-model="showMaterialSpecs"
-                    label="Обозначение специфического вида материала и физические характеристики"
-                  ></v-checkbox>
-
-                  <v-expand-transition>
-                    <div v-if="showMaterialSpecs">
-                      <v-text-field
-                        v-model="materialSpecs.size"
-                        label="Размеры"
-                        variant="outlined"
-                        @input="updateBookSpecials"
-                      ></v-text-field>
-                      <v-text-field
-                        v-model="materialSpecs.accompanyingMaterial"
-                        label="Сведения о сопроводительном материале"
-                        variant="outlined"
-                        @input="updateBookSpecials"
-                      ></v-text-field>
-                      <v-textarea
-                        v-model="materialSpecs.otherPhysicalDetails"
-                        label="Другие сведения о физической характеристике"
-                        variant="outlined"
-                        @input="updateBookSpecials"
-                      ></v-textarea>
-                    </div>
-                  </v-expand-transition>
-                </v-col>
-              </v-row>
-
-              <v-row>
-                <v-col>
-                  <v-checkbox
                     v-model="showManufacturerAddress"
                     label="Адрес изготовления"
                   ></v-checkbox>
@@ -1809,6 +1576,35 @@ getContentTypes()
                           ></v-text-field>
                         </v-col>
                       </v-row>
+                    </div>
+                  </v-expand-transition>
+                </v-col>
+              </v-row>
+
+              <v-row>
+                <v-col>
+                  <v-checkbox
+                    v-model="showMaterialSpecs"
+                    label="Обозначение специфического вида материала и физические характеристики"
+                  ></v-checkbox>
+
+                  <v-expand-transition>
+                    <div v-if="showMaterialSpecs">
+                      <v-text-field
+                        v-model="materialSpecs.size"
+                        label="Размеры"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-text-field
+                        v-model="materialSpecs.accompanyingMaterial"
+                        label="Сведения о сопроводительном материале"
+                        variant="outlined"
+                      ></v-text-field>
+                      <v-textarea
+                        v-model="materialSpecs.otherPhysicalDetails"
+                        label="Другие сведения о физической характеристике"
+                        variant="outlined"
+                      ></v-textarea>
                     </div>
                   </v-expand-transition>
                 </v-col>
@@ -1972,28 +1768,8 @@ getContentTypes()
 
     <v-row>
       <v-col class="text-center">
-        <v-btn
-          v-if="!showAdditionalData"
-          class="mr-2"
-          color="primary"
-          prepend-icon="mdi-plus"
-          variant="flat"
-          @click="showAdditionalData = true"
-          >Добавить дополнительные параметры
-        </v-btn>
-
-        <v-btn
-          v-if="!showFundData"
-          class="mr-2"
-          color="primary"
-          prepend-icon="mdi-plus"
-          variant="flat"
-          @click="showFundData = true"
-          >Добавить фонд
-        </v-btn>
-
-        <v-btn color="green" prepend-icon="mdi-plus" variant="flat" @click="sendBookData">
-          Добавить запись
+        <v-btn color="green" prepend-icon="mdi-plus" variant="flat" @click="sendBookData"
+          >Добавить в фонд
         </v-btn>
       </v-col>
     </v-row>
@@ -2035,14 +1811,3 @@ getContentTypes()
     </v-dialog>
   </v-container>
 </template>
-
-<style scoped>
-.error-text {
-  color: rgb(var(--v-theme-error)) !important;
-}
-
-.error-border {
-  border: 1px solid rgb(var(--v-theme-error)) !important;
-  border-radius: 4px;
-}
-</style>

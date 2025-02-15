@@ -1,10 +1,17 @@
 <script lang="ts" setup>
 import { useAPI } from '@/api'
+import { useAuth } from '@/auth';
 import { onMounted, ref, type Ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 const api = useAPI()
-
+const auth = useAuth()
+const isCollege = ref(false);
+watch(auth.userData, (value) => {
+  if (value && value.school.organization && value.school.organization.id === 3) {
+    isCollege.value = true;
+  }
+})
 interface Props {
   bottomItems: { label: string; value: number }[]
   oneLine: boolean
@@ -193,7 +200,9 @@ async function getRoles() {
         items: { id: number; name: string; label: string }[]
       }
     }>('/v1/role')
-    if (response.data) roles.value = response.data.data.items
+    if (response.data) {
+      roles.value = response.data.data.items
+    }
   } catch (e) {
     console.error('Error:', e)
   }
@@ -272,8 +281,8 @@ if (props.inventory) {
             </v-text-field>
           </v-col>
           <v-col class="d-flex justify-space-around">
-            <v-btn color="primary" variant="flat" @click="startSearch">{{t('search')}}</v-btn>
-            <v-btn variant="tonal" @click="resetFilters">{{t('reset')}}</v-btn>
+            <v-btn color="primary" variant="flat" @click="startSearch">{{ t('search') }}</v-btn>
+            <v-btn variant="tonal" @click="resetFilters">{{ t('reset') }}</v-btn>
           </v-col>
         </v-row>
         <v-row class="mb-2">
@@ -345,7 +354,7 @@ if (props.inventory) {
               clearable
               item-title="user_data.lastname"
               item-value="id"
-              :label="t('class_teacher')"
+              :label="isCollege ? 'Куратор' : t('class_teacher')"
               variant="solo-filled"
               @update:search="getTeachers"
             >

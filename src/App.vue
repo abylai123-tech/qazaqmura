@@ -2,17 +2,21 @@
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import logo from '@/assets/logo.svg'
 import avatar from '@/assets/image-ava.svg'
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useAuth } from '@/auth/index'
 import qrcode from '@/assets/qrcode.pdf'
 import { useI18n } from 'vue-i18n'
+import Toast from '@/components/Toast.vue'
+import { useToastStore } from '@/stores/toast'
+
 const { t, locale } = useI18n()
+const toast = useToastStore()
+
 const menu = ref(false)
 const helpMenu = ref(false)
 const route = useRoute()
 const auth = useAuth()
 const router = useRouter()
-
 
 const navigation = computed(() => [
   {
@@ -48,12 +52,30 @@ const navigation = computed(() => [
     }
   },
   {
+    title: 'Онлайн библиотека',
+    value: 11,
+    props: {
+      prependIcon: 'mdi-library',
+      appendIcon: 'mdi-chevron-right',
+      to: { name: 'online-library' }
+    }
+  },
+  {
     title: t('fund'),
     value: 4,
     props: {
       prependIcon: 'mdi-book-multiple',
       appendIcon: 'mdi-chevron-right',
       to: { name: 'fund' }
+    }
+  },
+  {
+    title: 'Отчеты',
+    value: 10,
+    props: {
+      prependIcon: 'mdi-file-chart',
+      appendIcon: 'mdi-chevron-right',
+      to: { name: 'reports' }
     }
   },
   {
@@ -87,16 +109,16 @@ const navigation = computed(() => [
       appendIcon: 'mdi-chevron-right',
       to: { name: 'purchase' }
     }
-  },
-  {
-    title: 'Конкурс',
-    value: 9,
-    props: {
-      prependIcon: 'mdi-library',
-      appendIcon: 'mdi-chevron-right',
-      to: { name: 'contest' }
-    }
   }
+  // {
+  //   title: 'Конкурс',
+  //   value: 9,
+  //   props: {
+  //     prependIcon: 'mdi-library',
+  //     appendIcon: 'mdi-chevron-right',
+  //     to: { name: 'contest' }
+  //   }
+  // }
 ])
 
 const publisherNavigation = computed(() => [
@@ -152,9 +174,12 @@ const showLayout = computed(() => {
 })
 
 const navigationDrawerItems = computed(() => {
-  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3)) {
+  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
     return navigation.value
-  } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 4)) {
+  } else if (
+    auth.user.value &&
+    auth.user.value.roles.some((obj) => obj.id === 4 || obj.id === 11)
+  ) {
     return classroomNavigation.value
   } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 7)) {
     return publisherNavigation.value
@@ -183,7 +208,9 @@ const navigationActive = computed(() => {
     case 'entity':
       return 14
     case 'quotes':
-      return 20 
+      return 20
+    case 'reports':
+      return 10
     default:
       return 0
   }
@@ -257,6 +284,7 @@ const guideItems = [
 
 <template>
   <v-layout class="app-background">
+    <Toast />
     <v-app-bar v-if="showLayout" class="app-border" color="white" flat>
       <v-app-bar-title>
         <v-img :src="logo" :width="180" alt="logo" class="ml-6"></v-img>
@@ -328,7 +356,18 @@ const guideItems = [
               </template>
 
               <template v-slot:default>
-                <v-card></v-card>
+                <v-card>
+                  <v-card-text>
+                    <iframe
+                      width="100%"
+                      height="450"
+                      src="https://www.youtube.com/embed/ylyz5wkuFSs"
+                      frameborder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowfullscreen
+                    ></iframe>
+                  </v-card-text>
+                </v-card>
               </template>
             </v-dialog>
 
@@ -385,9 +424,19 @@ const guideItems = [
           </v-list>
         </v-menu>
 
-        <v-btn @click="switchLocale('kk')" variant="text" :color="locale === 'kk' ? 'black': 'grey'">Каз</v-btn>
+        <v-btn
+          @click="switchLocale('kk')"
+          variant="text"
+          :color="locale === 'kk' ? 'black' : 'grey'"
+          >Каз</v-btn
+        >
         <v-divider vertical inset></v-divider>
-        <v-btn @click="switchLocale('ru')" variant="text" :color="locale === 'ru' ? 'black': 'grey'">Рус</v-btn>
+        <v-btn
+          @click="switchLocale('ru')"
+          variant="text"
+          :color="locale === 'ru' ? 'black' : 'grey'"
+          >Рус</v-btn
+        >
       </template>
     </v-app-bar>
 
@@ -502,6 +551,8 @@ const guideItems = [
           <v-list-item :to="{ name: 'bookType' }" :title="t('type')"></v-list-item>
           <v-list-item :to="{ name: 'tag' }" title="Ключевые слова"></v-list-item>
           <v-list-item :to="{ name: 'material' }" title="Обозначение материала"></v-list-item>
+          <v-list-item :to="{ name: 'discipline' }" title="Дисциплина"></v-list-item>
+          <v-list-item :to="{ name: 'qualification' }" title="Квалификация"></v-list-item>
         </v-list-group>
         <v-list-item
           :value="27"

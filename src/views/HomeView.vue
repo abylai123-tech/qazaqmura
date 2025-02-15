@@ -24,6 +24,8 @@ import qazaqstan from '@/assets/flags/qazaqstan.svg'
 import world from '@/assets/flags/world.svg'
 import { useI18n } from 'vue-i18n'
 import axios from 'axios'
+import EventComponent from '@/components/EventComponent.vue'
+
 const { t } = useI18n()
 const auth = useAuth()
 const api = useAPI()
@@ -281,7 +283,7 @@ const ministryStatistics = ref([
 ])
 
 const statistics = computed(() => {
-  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3)) {
+  if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
     return librarianStatistics.value
   } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 4)) {
     return classroomStatistics.value
@@ -296,6 +298,18 @@ const statistics = computed(() => {
   }
   return []
 })
+
+const organizationTypes: Ref<any[]> = ref([])
+const selectedOrganizationType: Ref<number | null> = ref(null)
+
+const getOrganizationTypes = async () => {
+  const response = await api.fetchData<{ data: { items: any[] } }>('/v1/organization')
+  if (response.data) {
+    organizationTypes.value = response.data.data.items
+  }
+}
+
+getOrganizationTypes();
 
 async function downloadPDF(id: any) {
   const response = await api.postData(
@@ -549,13 +563,17 @@ const bookSchools = ref({
 async function getRegionDetails() {
   regionDetailsLoaded.value = false
   try {
-    let url = '/v1/dashboard/ministry/details'
+    let url = '/v1/dashboard/ministry/details?1=1'
     if (selectedThirdRegion.value) {
-      url += `?region_id=${selectedThirdRegion.value.id}`
+      url += `&region_id=${selectedThirdRegion.value.id}`
     } else if (selectedChildRegion.value) {
-      url += `?region_id=${selectedChildRegion.value.id}`
-    } else {
-      url += `?region_id=${selectedRegion.value.id}`
+      url += `&region_id=${selectedChildRegion.value.id}`
+    } else if (selectedRegion.value) {
+      url += `&region_id=${selectedRegion.value.id}`
+    }
+
+    if (selectedOrganizationType.value) {
+      url += `&organization_type=${selectedOrganizationType.value}`
     }
 
     const response =
@@ -660,6 +678,9 @@ const getSchools = async (search: string | null = null, name: string | null = nu
     if (selectedThirdRegion.value) request += `&region_id=${selectedThirdRegion.value.id}`
     else if (selectedChildRegion.value) request += `&region_id=${selectedChildRegion.value.id}`
     else if (selectedRegion.value) request += `&region_id=${selectedRegion.value.id}`
+
+    if (selectedOrganizationType.value) request += `&organization_id=${selectedOrganizationType.value}`
+
     const response = await api.fetchData<{ data: { items: any[] }; meta: { last_page: number } }>(
       request
     )
@@ -885,11 +906,18 @@ watch(selectedThirdRegion, () => {
   getRegionDetails()
 })
 
-if (role.value === 3) {
+watch(selectedOrganizationType, () => {
+  getRegions()
+  getSchools()
+  getRegionDetails()
+})
+
+
+if (role.value === 3 || role.value === 10) {
   getDashboard()
 }
 
-if (role.value === 4) {
+if (role.value === 4 || role.value === 11) {
   getClassroomStatistics()
 }
 
@@ -1204,6 +1232,16 @@ getInventory()
         </v-card-text>
       </v-card>
 
+      <v-card v-if="role === 8 || role === 1" class="my-4">
+        <v-card-text>
+          <v-row>
+            <v-col>
+              <v-select v-model="selectedOrganizationType" item-title="label" item-value="id" label="Выберите тип организации" :items="organizationTypes" hide-details variant="outlined"></v-select>
+            </v-col>
+          </v-row>
+        </v-card-text>
+      </v-card>
+
       <v-row v-if="(role === 8 || role === 1) && regionDetailsLoaded">
         <v-col cols="3">
           <StatisticsList :statistics="statistics"></StatisticsList>
@@ -1490,7 +1528,7 @@ getInventory()
         <v-col cols="3">
           <StatisticsList :statistics="statistics"></StatisticsList>
         </v-col>
-        <v-col v-if="role === 3" cols="6">
+        <v-col v-if="role === 3 || role === 10" cols="6">
           <!-- <v-card>
             <v-card-title>{{ t('issue_return_statistics') }}</v-card-title>
             <v-card-subtitle>{{ t('easy_to_track_statistics') }}</v-card-subtitle>
@@ -1549,7 +1587,7 @@ getInventory()
             </v-card-text>
           </v-card>
         </v-col>
-        <v-col v-if="role === 3" cols="3">
+        <v-col v-if="role === 3 || role === 10" cols="3">
           <v-card>
             <v-card-title>{{ t('issue_return') }}</v-card-title>
             <v-card-subtitle>Быстрый поиск по ИИН</v-card-subtitle>
@@ -1614,7 +1652,7 @@ getInventory()
           </v-card>
         </v-col>
 
-        <v-col v-if="role === 4">
+        <v-col v-if="role === 4 || role === 11">
           <v-card title="Список">
             <v-card-text>
               <v-data-table :headers="classroomHeaders" :items="classroomItems">
@@ -1633,7 +1671,7 @@ getInventory()
           </v-card>
         </v-col>
 
-        <v-col v-if="role === 4" cols="3">
+        <v-col v-if="role === 4 || role === 11" cols="3">
           <v-card>
             <v-card-title>Заявки на класс</v-card-title>
             <v-card-subtitle>Выдача на класс</v-card-subtitle>
@@ -1753,7 +1791,7 @@ getInventory()
         </v-col>
       </v-row>
 
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col cols="3">
           <CountryModal></CountryModal>
         </v-col>
@@ -1789,7 +1827,7 @@ getInventory()
           </v-card>
         </v-col>
       </v-row>
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col cols="12">
           <v-card title="Состояние библиотеки">
             <v-card-text>
@@ -1921,17 +1959,17 @@ getInventory()
                 </v-col>
               </v-row>
             </v-card-text>
-            <v-card-actions>
+            <!-- <v-card-actions>
               <v-dialog>
                 <template v-slot:activator="{ props }">
                   <v-btn color="primary" v-bind="props" variant="flat">Подробнее</v-btn>
                 </template>
               </v-dialog>
-            </v-card-actions>
+            </v-card-actions> -->
           </v-card>
         </v-col>
       </v-row>
-      <v-row v-if="role === 3">
+      <v-row v-if="role === 3 || role === 10">
         <v-col>
           <v-card>
             <v-card-title>{{ t('fund_status') }}</v-card-title>
@@ -1978,7 +2016,7 @@ getInventory()
         </v-col>
       </v-row>
 
-      <v-row v-if="role === 4">
+      <v-row v-if="role === 4 || role === 11">
         <v-col>
           <v-card>
             <v-card-title>История заявок</v-card-title>
@@ -2481,6 +2519,12 @@ getInventory()
             size="small"
             variant="flat"
           ></v-pagination>
+        </v-col>
+      </v-row>
+
+      <v-row v-if="role === 3 || role === 10">
+        <v-col>
+          <event-component />
         </v-col>
       </v-row>
     </v-container>

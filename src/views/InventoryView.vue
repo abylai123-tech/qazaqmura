@@ -6,8 +6,10 @@ import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
-import QRCode from 'qrcode';
+import QRCode from 'qrcode'
+const toast = useToastStore()
 
 interface Inventory {
   amount: any
@@ -64,10 +66,13 @@ async function addToInventory(inventories: Number[]) {
       book_school_id: bookSchoolId,
       inventories: inventories
     })
-  } catch (error) {
+    toast.success('Инвентарные номера успешно добавлены')
+    closeInventory()
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при добавлении инвентарных номеров'
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
-  closeInventory()
 }
 
 async function getInventorySearch(search: string | null = null) {
@@ -79,7 +84,8 @@ async function getInventorySearch(search: string | null = null) {
     if (response.data) {
       inventorySearch.value = response.data
     }
-  } catch (error) {
+  } catch (error: any) {
+    toast.error('Ошибка при поиске книг')
     console.error('Error:', error)
   }
 }
@@ -90,12 +96,27 @@ function closeInventory() {
 }
 
 async function downloadPDF(mode: 1 | 2) {
-  if (mode === 1) {
-    const response = await api.postData(`/v1/book/school/inventory/pdf`, null, true)
-    if (response.data) fileDownload(response.data, `${t('inventory_list')}.pdf`)
-  } else {
-    const response = await api.postData(`/v1/book/school/inventory/decommissioned/pdf`, null, true)
-    if (response.data) fileDownload(response.data, `${t('list_of_written_off_books')}.pdf`)
+  try {
+    if (mode === 1) {
+      const response = await api.postData(`/v1/book/school/inventory/pdf`, null, true)
+      if (response.data) {
+        fileDownload(response.data, `${t('inventory_list')}.pdf`)
+        toast.success('Список инвентаризации успешно скачан')
+      }
+    } else {
+      const response = await api.postData(
+        `/v1/book/school/inventory/decommissioned/pdf`,
+        null,
+        true
+      )
+      if (response.data) {
+        fileDownload(response.data, `${t('list_of_written_off_books')}.pdf`)
+        toast.success('Список списанных книг успешно скачан')
+      }
+    }
+  } catch (error: any) {
+    toast.error('Ошибка при скачивании документа')
+    console.error('Error:', error)
   }
 }
 
@@ -106,6 +127,7 @@ async function getBookInfo(bookSchoolId: number) {
     const response = await api.fetchData(`/v1/book/school/${bookSchoolId}`)
     info.value = response.data
   } catch (e) {
+    toast.error('Ошибка при загрузке информации о книге')
     console.error('Error:', e)
   }
 }
@@ -155,7 +177,7 @@ const getInventoryCount = async (id: number) => {
 
 const sort = ref(0)
 
-if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3)) {
+if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 3 || obj.id === 10)) {
   getInventoryCount(auth.userData.value.school.id)
 }
 
@@ -238,55 +260,63 @@ const turnOnEditMode = (item) => {
 }
 
 const editInvent = async (item) => {
-  const body = {
-    id: item.inventory.id,
-    book_school_id: item.book_school_id,
-    inventory: item.numberDouble
+  try {
+    const body = {
+      id: item.inventory.id,
+      book_school_id: item.book_school_id,
+      inventory: item.numberDouble
+    }
+    await api.putData(`/v1/book/inventory/${item.inventory.id}`, body)
+    await searchContractors()
+    toast.success('Инвентарный номер успешно обновлен')
+    item.editMode = false
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при обновлении инвентарного номера'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
-  await api.putData(`/v1/book/inventory/${item.inventory.id}`, body)
-  await searchContractors()
-  item.editMode = false
 }
 
-const qrCodeDataUrl = ref('');
-const qrCanvas = ref(null);
+const qrCodeDataUrl = ref('')
+const qrCanvas = ref(null)
 const qrText = ref('')
 
 const generateQR = async (item: any) => {
   try {
-    const response = await api.fetchFile('/v1/book/inventory/qr', { book_id: item.book_school_id });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'qrcode.pdf';
-        document.body.appendChild(a);
-        a.click();
-
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+    const response = await api.fetchFile('/v1/book/inventory/qr', { book_id: item.book_school_id })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'qrcode.pdf'
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    toast.success('QR код успешно скачан')
   } catch (e) {
+    toast.error('Ошибка при генерации QR кода')
     console.error(e.message)
   }
 }
 
-
 const generateListQR = async () => {
   try {
-    const response = await api.fetchFile('/v1/book/inventory/qr/list', { school_id: auth.userData.value.school.id });
-    const blob = new Blob([response.data], { type: 'application/pdf' });
-        const url = window.URL.createObjectURL(blob);
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'qrcode-list.pdf';
-        document.body.appendChild(a);
-        a.click();
-
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
+    const response = await api.fetchFile('/v1/book/inventory/qr/list', {
+      school_id: auth.userData.value.school.id
+    })
+    const blob = new Blob([response.data], { type: 'application/pdf' })
+    const url = window.URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'qrcode-list.pdf'
+    document.body.appendChild(a)
+    a.click()
+    window.URL.revokeObjectURL(url)
+    document.body.removeChild(a)
+    toast.success('Список QR кодов успешно скачан')
   } catch (e) {
+    toast.error('Ошибка при генерации списка QR кодов')
     console.error(e.message)
   }
 }
@@ -310,8 +340,14 @@ watch(sort, () => {
       <v-list-item v-if="book">
         <div class="mt-4 font-weight-bold text-h6">{{ book.title }} / {{ book.amount }}</div>
         <div class="mt-2">
-          <v-chip v-for="author in book.author" :key="author.id" class="mr-2" color="primary" size="small"
-            variant="outlined">
+          <v-chip
+            v-for="author in book.author"
+            :key="author.id"
+            class="mr-2"
+            color="primary"
+            size="small"
+            variant="outlined"
+          >
             {{ author.name }}
           </v-chip>
         </div>
@@ -336,19 +372,36 @@ watch(sort, () => {
         </div>
       </v-list-item>
       <v-list-item>
-        <v-autocomplete v-model="book" :items="inventorySearch" class="pt-10" item-title="title" :label="t('book')"
-          placeholder="Напишите название" return-object variant="outlined"
-          @update:search="getInventorySearch"></v-autocomplete>
+        <v-autocomplete
+          v-model="book"
+          :items="inventorySearch"
+          class="pt-10"
+          item-title="title"
+          :label="t('book')"
+          placeholder="Напишите название"
+          return-object
+          variant="outlined"
+          @update:search="getInventorySearch"
+        ></v-autocomplete>
       </v-list-item>
       <div v-if="book">
-        <v-list-item><strong>{{ t('inventory_numbers') }}</strong></v-list-item>
+        <v-list-item
+          ><strong>{{ t('inventory_numbers') }}</strong></v-list-item
+        >
         <v-list-item v-for="n in book.amount - book.book_inventory.length" :key="n">
-          <v-text-field v-model="inventories[n - 1]" class="mt-2" label="Инвентарный номер" placeholder="Напишите номер"
-            type="number" variant="outlined"></v-text-field>
+          <v-text-field
+            v-model="inventories[n - 1]"
+            class="mt-2"
+            label="Инвентарный номер"
+            placeholder="Напишите номер"
+            type="number"
+            variant="outlined"
+          ></v-text-field>
         </v-list-item>
         <v-list-item>
           <v-btn class="mr-3" variant="tonal" @click="closeInventory">{{ t('close') }}</v-btn>
-          <v-btn color="primary" variant="flat" @click="addToInventory(inventories)">{{ t('add') }}
+          <v-btn color="primary" variant="flat" @click="addToInventory(inventories)"
+            >{{ t('add') }}
           </v-btn>
         </v-list-item>
       </div>
@@ -358,14 +411,17 @@ watch(sort, () => {
       <template v-slot:title>
         <div class="d-flex flex-column">
           <span class="text-h6 font-weight-bold">{{ t('inventory_management') }}</span>
-          <span class="text-subtitle-2 text-medium-emphasis">{{ t('online_inventory_of_books') }}</span>
+          <span class="text-subtitle-2 text-medium-emphasis">{{
+            t('online_inventory_of_books')
+          }}</span>
         </div>
       </template>
 
       <template v-slot:append>
         <v-menu>
           <template v-slot:activator="{ props }">
-            <v-btn class="mr-3" prepend-icon="mdi-chevron-down" v-bind="props" variant="tonal">{{ t('sorting') }}
+            <v-btn class="mr-3" prepend-icon="mdi-chevron-down" v-bind="props" variant="tonal"
+              >{{ t('sorting') }}
             </v-btn>
           </template>
 
@@ -381,8 +437,13 @@ watch(sort, () => {
 
         <v-menu>
           <template v-slot:activator="{ props }">
-            <v-btn class="mr-3" color="primary" prepend-icon="mdi-chevron-down" v-bind="props" variant="flat">{{
-              t('download_pdf') }}
+            <v-btn
+              class="mr-3"
+              color="primary"
+              prepend-icon="mdi-chevron-down"
+              v-bind="props"
+              variant="flat"
+              >{{ t('download_pdf') }}
             </v-btn>
           </template>
 
@@ -394,7 +455,8 @@ watch(sort, () => {
 
         <v-menu>
           <template v-slot:activator="{ props }">
-            <v-btn class="mr-3" prepend-icon="mdi-chevron-down" v-bind="props" variant="tonal">{{ t('inventory') }}
+            <v-btn class="mr-3" prepend-icon="mdi-chevron-down" v-bind="props" variant="tonal"
+              >{{ t('inventory') }}
             </v-btn>
           </template>
 
@@ -406,33 +468,63 @@ watch(sort, () => {
           </v-list>
         </v-menu>
 
-        <help-button video-id="Lil4z75KxjA" class="mr-3" />
+        <help-button video-id="gWi5QPlcyLY " class="mr-3" />
       </template>
     </v-app-bar>
 
     <v-row>
       <v-col cols="12">
-        <FilterBlock v-model="filters" :bottom-items="auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1) ? [] : bottomItems
-          " :mdata="false" :one-line="false" :users="false" inventory @search="searchContractors">
+        <FilterBlock
+          v-model="filters"
+          :bottom-items="
+            auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1) ? [] : bottomItems
+          "
+          :mdata="false"
+          :one-line="false"
+          :users="false"
+          inventory
+          @search="searchContractors"
+        >
         </FilterBlock>
       </v-col>
     </v-row>
 
-    <v-data-table :headers="headers" :items="items.filter((item) => {
-      return item.inventory
-    })
-      " :items-per-page="items.length" class="mt-2">
+    <v-data-table
+      :headers="headers"
+      :items="
+        items.filter((item) => {
+          return item.inventory
+        })
+      "
+      :items-per-page="items.length"
+      class="mt-2"
+    >
       <template v-slot:[`item.book`]="{ item }">
         <div class="mt-3">{{ item.title }}</div>
-        <div class="text-subtitle-2 text-medium-emphasis">{{ t('year_of_publication') }}: {{ item.year }}</div>
+        <div class="text-subtitle-2 text-medium-emphasis">
+          {{ t('year_of_publication') }}: {{ item.year }}
+        </div>
         <div class="mb-3">
-          <v-chip v-for="author in item.author" :key="author" class="mr-2" color="primary" size="x-small"
-            variant="outlined">{{ author }}
+          <v-chip
+            v-for="author in item.author"
+            :key="author"
+            class="mr-2"
+            color="primary"
+            size="x-small"
+            variant="outlined"
+            >{{ author }}
           </v-chip>
         </div>
         <div class="my-1">
-          <v-chip v-for="pub in item.publisher" :key="pub" class="mr-2" color="green" size="small" variant="flat">{{
-            t('publisher') }}: <span>{{ pub }}</span></v-chip>
+          <v-chip
+            v-for="pub in item.publisher"
+            :key="pub"
+            class="mr-2"
+            color="green"
+            size="small"
+            variant="flat"
+            >{{ t('publisher') }}: <span>{{ pub }}</span></v-chip
+          >
         </div>
       </template>
 
@@ -452,16 +544,22 @@ watch(sort, () => {
       <template v-slot:[`item.invent`]="{ item }">
         <div class="mt-3"></div>
         <div class="text-subtitle-2 text-medium-emphasis">
-          <v-chip v-if="item.inventory.status === 1" size="x-small" variant="flat">{{ t('status') }}: в фонде
+          <v-chip v-if="item.inventory.status === 1" size="x-small" variant="flat"
+            >{{ t('status') }}: в фонде
           </v-chip>
-          <v-chip v-else-if="item.inventory.status === 0" color="red" size="x-small" variant="flat">{{ t('status') }}:
-            списано
+          <v-chip v-else-if="item.inventory.status === 0" color="red" size="x-small" variant="flat"
+            >{{ t('status') }}: списано
           </v-chip>
         </div>
       </template>
 
       <template v-slot:[`item.actions`]="{ item }">
-        <v-btn v-if="!item.editMode" icon="mdi-pencil" variant="flat" @click="turnOnEditMode(item)"></v-btn>
+        <v-btn
+          v-if="!item.editMode"
+          icon="mdi-pencil"
+          variant="flat"
+          @click="turnOnEditMode(item)"
+        ></v-btn>
         <div v-else>
           <v-btn color="green" variant="flat" @click="editInvent(item)">
             <v-icon icon="mdi-check"></v-icon>
@@ -470,15 +568,27 @@ watch(sort, () => {
             <v-icon icon="mdi-close"></v-icon>
           </v-btn>
         </div>
-        <v-btn @click="generateQR(item)" v-if="!item.editMode" variant="flat" icon="mdi-download"></v-btn>
+        <v-btn
+          @click="generateQR(item)"
+          v-if="!item.editMode"
+          variant="flat"
+          icon="mdi-download"
+        ></v-btn>
       </template>
 
       <template v-slot:bottom></template>
     </v-data-table>
 
     <v-row class="mt-4">
-      <v-pagination v-model="page" :length="length" :total-visible="6" active-color="primary" class="ml-auto mr-2"
-        size="small" variant="flat"></v-pagination>
+      <v-pagination
+        v-model="page"
+        :length="length"
+        :total-visible="6"
+        active-color="primary"
+        class="ml-auto mr-2"
+        size="small"
+        variant="flat"
+      ></v-pagination>
     </v-row>
   </v-container>
 </template>

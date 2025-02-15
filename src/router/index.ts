@@ -29,6 +29,9 @@ import BookPage from '@/views/BookPage.vue'
 import BkView from '@/views/BkView.vue'
 import UpdateView from '@/views/UpdateView.vue'
 import QuotesView from '@/views/QuotesView.vue'
+import OnlineLibrary from '@/views/OnlineLibrary.vue'
+import ReportsView from '@/views/ReportsView.vue'
+import FundAddViewVue from '@/views/FundAddView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -292,6 +295,18 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/discipline',
+      name: 'discipline',
+      component: EntityView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/qualification',
+      name: 'qualification',
+      component: EntityView,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/regions',
       name: 'regions',
       component: RegionsView,
@@ -313,6 +328,24 @@ const router = createRouter({
       path: '/quotes',
       name: 'quotes',
       component: QuotesView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/online-library',
+      name: 'online-library',
+      component: OnlineLibrary,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/reports',
+      name: 'reports',
+      component: ReportsView,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/fund/add',
+      name: 'fundAdd',
+      component: FundAddViewVue,
       meta: { requiresAuth: true }
     }
   ]

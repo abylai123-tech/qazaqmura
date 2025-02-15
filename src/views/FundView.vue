@@ -13,8 +13,10 @@ import fiction from '@/assets/admission_fiction.pdf'
 import HelpButton from '@/components/HelpButton.vue'
 import fileDownload from 'js-file-download'
 import { useI18n } from 'vue-i18n'
+import { useToastStore } from '@/stores/toast'
 const { t } = useI18n()
 const api = useAPI()
+const toast = useToastStore()
 
 interface Contractor {
   address: string
@@ -39,6 +41,8 @@ interface Book {
   book_bbk: { id: number; title: string }[]
   admission_at: string
   book_admission_id: number
+  book_school_id?: number
+  book_state_id?: number | null
 }
 
 interface SubBook {
@@ -101,7 +105,9 @@ const selectedItem: Ref<Book> = ref({
   book_state: '',
   book_bbk: [],
   admission_at: '',
-  book_admission_id: 0
+  book_admission_id: 0,
+  book_school_id: 0,
+  book_state_id: null
 })
 
 interface Filter {
@@ -122,6 +128,17 @@ const filters: Ref<Filter> = ref({
   epub: false
 })
 
+const pageInput: Ref<number> = ref(1)
+
+function goToPage() {
+  const pageNum = Number(pageInput.value)
+  if (pageNum >= 1 && pageNum <= length.value) {
+    page.value = pageNum
+  } else {
+    pageInput.value = page.value // Reset to current page if invalid
+  }
+}
+
 async function getBooks() {
   loading.value = true
   try {
@@ -139,21 +156,31 @@ async function getBooks() {
       length.value = response.data.meta.last_page
     }
   } catch (error: any) {
-    console.error('Error:', error.message)
+    let errorMessage = error?.message || 'Ошибка при загрузке фонда'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
 }
 
 const editData = async (isActive: Ref<boolean>) => {
-  const bookSchoolForm = {
-    amount: selectedItem.value.amount,
-    price: selectedItem.value.price,
-    admission_at: admissionDate.value,
-    contractor_id: selectedItem.value.contractor2.id
+  try {
+    const bookSchoolForm = {
+      amount: selectedItem.value.amount,
+      price: selectedItem.value.price,
+      admission_at: admissionDate.value,
+      contractor_id: selectedItem.value.contractor
+    }
+    console.log(selectedItem);
+    
+    await api.putData(`/v1/book/school/${selectedItem.value.book_school_id}`, bookSchoolForm)
+    await getBooks()
+    toast.success('Данные успешно обновлены')
+    isActive.value = false
+  } catch (error: any) {
+    let errorMessage = error?.message || 'Ошибка при редактировании записи'
+    toast.error(errorMessage)
+    console.error('Error:', error)
   }
-  await api.putData(`/v1/book/school/${selectedItem.value.book_school_id}`, bookSchoolForm)
-  await getBooks()
-
-  isActive.value = false
 }
 
 const filterBlock = {
@@ -165,32 +192,39 @@ const filterBlock = {
 }
 
 async function downloadPDF(title: string, id?: number) {
-  const link = document.createElement('a')
-  if (title === 'bookForm') {
-    const response = await api.postData(`/v1/book/school/book-form/pdf/${id}`, null, true)
-    if (response.data) fileDownload(response.data, 'Книжный формуляр.pdf')
-  } else if (title === 'publisher') {
-    const response = await api.postData(`/v1/book/school/publisher/pdf`, null, true)
-    if (response.data) fileDownload(response.data, 'Отчет по издателям.pdf')
-  } else if (title === 'admission') {
-    const response = await api.postData('/v1/book/school/admission/pdf', null, true)
-    if (response.data) fileDownload(response.data, 'admission.pdf')
-  } else if (title === 'fund') {
-    const response = await api.postData('/v1/book/school/book/pdf', null, true)
-    if (response.data) fileDownload(response.data, 'school_fund.pdf')
-  } else if (title === 'nonfiction') {
-    const response = await api.postData('/v1/book/school/book/pdf?type_id=1', null, true)
-    if (response.data) fileDownload(response.data, 'Список учебников.pdf')
-  } else if (title === 'fiction') {
-    const response = await api.postData('/v1/book/school/book/pdf?type_id=17', null, true)
-    if (response.data) fileDownload(response.data, 'Список основного фонда.pdf')
-  } else {
-    const response = await api.postData(`/v1/book/school/catalog-card/pdf/${id}`, null, true)
-    if (response.data) fileDownload(response.data, 'Каталожная карточка.pdf')
+  try {
+    if (title === 'bookForm') {
+      const response = await api.postData(`/v1/book/school/book-form/pdf/${id}`, null, true)
+      if (response.data) {
+        fileDownload(response.data, 'Книжный формуляр.pdf')
+        toast.success('Книжный формуляр успешно скачан')
+      }
+    } else if (title === 'publisher') {
+      const response = await api.postData(`/v1/book/school/publisher/pdf`, null, true)
+      if (response.data) {
+        fileDownload(response.data, 'Отчет по издателям.pdf')
+        toast.success('Отчет по издателям успешно скачан')
+      }
+    } else if (title === 'admission') {
+      const response = await api.postData('/v1/book/school/admission/pdf', null, true)
+      if (response.data) fileDownload(response.data, 'admission.pdf')
+    } else if (title === 'fund') {
+      const response = await api.postData('/v1/book/school/book/pdf', null, true)
+      if (response.data) fileDownload(response.data, 'school_fund.pdf')
+    } else if (title === 'nonfiction') {
+      const response = await api.postData('/v1/book/school/book/pdf?type_id=1', null, true)
+      if (response.data) fileDownload(response.data, 'Список учебников.pdf')
+    } else if (title === 'fiction') {
+      const response = await api.postData('/v1/book/school/book/pdf?type_id=17', null, true)
+      if (response.data) fileDownload(response.data, 'Список основного фонда.pdf')
+    } else {
+      const response = await api.postData(`/v1/book/school/catalog-card/pdf/${id}`, null, true)
+      if (response.data) fileDownload(response.data, 'Каталожная карточка.pdf')
+    }
+  } catch (error: any) {
+    toast.error('Ошибка при скачивании документа')
+    console.error('Error:', error)
   }
-  // link.download = 'document.pdf'
-  // link.click()
-  // document.body.removeChild(link)
 }
 
 async function submitClear(isActive: Ref<boolean>, bookId: number | null) {
@@ -198,9 +232,13 @@ async function submitClear(isActive: Ref<boolean>, bookId: number | null) {
     const response = await api.deleteData(`/v1/book/school/inventory/${bookId}`)
     isActive.value = false
     await getBooks()
-    snackbar.value = true
-    snackbarText.value = response.data.message
-  } catch (error) {
+    toast.success(response.data.message || 'Инвентаризация успешно сброшена')
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при сбросе инвентаризации'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }
@@ -225,10 +263,14 @@ async function submitDeletion(isActive: Ref<boolean>, bookId: number) {
   try {
     const response = await api.deleteData(`/v1/book/school/${bookId}`)
     isActive.value = false
-    snackbar.value = true
-    snackbarText.value = response.data.message
+    toast.success(response.data.message || 'Книга успешно удалена из фонда')
     await getBooks()
-  } catch (error) {
+  } catch (error: any) {
+    let errorMessage = 'Ошибка при удалении книги'
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message
+    }
+    toast.error(errorMessage)
     console.error('Error:', error)
   }
 }
@@ -273,15 +315,23 @@ async function getStates(search = null) {
 }
 
 async function selectItem(item) {
-  console.log(item)
-
+  console.log(item);
+  
   const response = await api.fetchData('/v1/book/school/' + item.book_school_id)
   selectedItem.value.amount = response.data.amount
   selectedItem.value.contractor = response.data.contractor_id
   selectedItem.value.price = response.data.price
   selectedItem.value.book_admission_id = response.data.book_admission_id
   selectedItem.value.book_state_id = response.data.book_state_id
-  admissionDate.value = response.data.admission_at
+  selectedItem.value.book_school_id = item.book_school_id
+
+  const date = response.data.admission_at
+  if (date) {
+    const [year, month, day] = date.split('-')
+    admissionDate.value = `${day}.${month}.${year}`
+  } else {
+    admissionDate.value = ''
+  }
 }
 
 const admissionBlock: Ref<{ label: string; value: string }> = ref([])
@@ -305,9 +355,6 @@ async function getAdmissionBlock() {
   }
 }
 
-const snackbar = ref(false)
-const snackbarText = ref('')
-
 const getTotal = (price: number, amount: number) => {
   if (!price || !amount) return ''
   else return price * amount + ' ₸'
@@ -319,21 +366,19 @@ getContractors()
 getStates()
 getAdmissionBlock()
 
-watch(page, () => {
+watch(page, (newValue) => {
+  pageInput.value = newValue
   getBooks()
 })
 </script>
 
 <template>
   <v-container fluid>
-    <v-snackbar v-model="snackbar" :timeout="1000">{{ snackbarText }}</v-snackbar>
     <v-app-bar>
       <template v-slot:title>
         <div class="d-flex flex-column">
-          <span class="text-h6 font-weight-bold">{{t('fund')}}</span>
-          <span class="text-subtitle-2 text-medium-emphasis"
-            >{{t('database_by_rk')}}</span
-          >
+          <span class="text-h6 font-weight-bold">{{ t('fund') }}</span>
+          <span class="text-subtitle-2 text-medium-emphasis">{{ t('database_by_rk') }}</span>
         </div>
       </template>
 
@@ -367,7 +412,7 @@ watch(page, () => {
             </v-list-item>
           </v-list>
         </v-menu>
-        <HelpButton video-id="ASELCx5TId8" />
+        <HelpButton video-id="8vUsW7Fs5M8" />
       </template>
     </v-app-bar>
 
@@ -424,11 +469,15 @@ watch(page, () => {
                       </v-row>
                       <v-row>
                         <v-col cols="4">
-                          <div><strong>{{t('year_of_publication')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('year_of_publication') }}:</strong>
+                          </div>
                           <div>{{ item.year }}</div>
                         </v-col>
                         <v-col cols="4">
-                          <div><strong>{{t('language')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('language') }}:</strong>
+                          </div>
                           <div>{{ item.language ? item.language.join(', ') : '' }}</div>
                         </v-col>
                         <v-col cols="4"></v-col>
@@ -440,7 +489,9 @@ watch(page, () => {
                           <div>{{ item.contractor }}</div>
                         </v-col>
                         <v-col cols="4">
-                          <div><strong>{{t('reception_date')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('reception_date') }}:</strong>
+                          </div>
                           <div>{{ item.admission_at }}</div>
                         </v-col>
                         <v-col cols="4">
@@ -450,11 +501,15 @@ watch(page, () => {
                       </v-row>
                       <v-row>
                         <v-col cols="4">
-                          <div><strong>{{ t('quantity') }}:</strong></div>
+                          <div>
+                            <strong>{{ t('quantity') }}:</strong>
+                          </div>
                           <div>{{ item.amount }}</div>
                         </v-col>
                         <v-col v-if="item.price" cols="4">
-                          <div><strong>{{t('price')}}:</strong></div>
+                          <div>
+                            <strong>{{ t('price') }}:</strong>
+                          </div>
                           <div>{{ item.price }} ₸</div>
                         </v-col>
                         <v-col v-if="item.price && item.amount" cols="4">
@@ -492,7 +547,7 @@ watch(page, () => {
                       v-bind="props"
                       variant="outlined"
                       @click="selectItem(item)"
-                      >{{t('edit_data')}}
+                      >{{ t('edit_data') }}
                     </v-btn>
                   </template>
 
@@ -527,7 +582,9 @@ watch(page, () => {
                               </div>
                               <v-row class="mt-2">
                                 <v-col>
-                                  <div><strong>{{t('language')}}:</strong></div>
+                                  <div>
+                                    <strong>{{ t('language') }}:</strong>
+                                  </div>
                                   <div>
                                     {{
                                       item.book_language
@@ -537,13 +594,17 @@ watch(page, () => {
                                   </div>
                                 </v-col>
                                 <v-col>
-                                  <div><strong>{{t('year_of_publication')}}:</strong></div>
+                                  <div>
+                                    <strong>{{ t('year_of_publication') }}:</strong>
+                                  </div>
                                   <div>{{ item.book ? item.book.year : '' }}</div>
                                 </v-col>
                               </v-row>
                               <v-row>
                                 <v-col>
-                                  <div><strong>{{t('publisher')}}:</strong></div>
+                                  <div>
+                                    <strong>{{ t('publisher') }}:</strong>
+                                  </div>
                                   <div>
                                     {{ item.contractor }}
                                   </div>
@@ -645,7 +706,7 @@ watch(page, () => {
                           @click="
                             submitClear(isActive, item.book_school_id ? item.book_school_id : null)
                           "
-                          >{{t('yes')}}
+                          >{{ t('yes') }}
                         </v-btn>
                         <v-btn class="ml-3 mr-auto" variant="tonal" @click="isActive.value = false"
                           >Отмена
@@ -672,7 +733,7 @@ watch(page, () => {
                           @click="
                             submitDeletion(isActive, item.book_school_id ? item.book_school_id : 0)
                           "
-                          >{{t('yes')}}
+                          >{{ t('yes') }}
                         </v-btn>
                         <v-btn class="ml-3 mr-auto" variant="tonal" @click="isActive.value = false"
                           >Отмена
@@ -688,16 +749,53 @@ watch(page, () => {
       </v-card>
     </v-row>
 
-    <v-row class="mt-4">
+    <v-row class="mt-4 mx-1">
       <v-pagination
         v-model="page"
         :length="length"
         :total-visible="6"
         active-color="primary"
-        class="ml-auto mr-2"
+        class="ml-auto"
         size="small"
         variant="flat"
       ></v-pagination>
+
+      <div class="d-flex align-center mr-2">
+        <v-text-field
+          variant="outlined"
+          v-model="pageInput"
+          :min="1"
+          :max="length"
+          density="compact"
+          hide-details
+          class="mx-2"
+          style="width: 120px"
+        >
+          <template v-slot:append>
+            <v-tooltip
+              :model-value="pageInput < 1 || pageInput > length"
+              location="bottom"
+              :text="`Введите число от 1 до ${length}`"
+            >
+              <template v-slot:activator="{ props }">
+                <v-icon
+                  v-bind="props"
+                  color="error"
+                  icon="mdi-alert-circle"
+                  v-show="pageInput < 1 || pageInput > length"
+                ></v-icon>
+              </template>
+            </v-tooltip>
+          </template>
+        </v-text-field>
+        <v-btn
+          icon="mdi-magnify"
+          size="small"
+          variant="flat"
+          @click="goToPage"
+          class="rounded-0"
+        ></v-btn>
+      </div>
     </v-row>
   </v-container>
 </template>

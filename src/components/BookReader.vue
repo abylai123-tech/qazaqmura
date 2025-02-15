@@ -11,17 +11,14 @@ const book = ref(null)
 const rendition = ref(null)
 const page = ref(1)
 const tableOfContents = ref([])
-const title = ref('')
 const loadBook = async () => {
   book.value = ePub(props.src)
   rendition.value = book.value.renderTo('reader', {
     width: '90vw',
-    height: '87vh',
+    height: '88vh',
     allowScriptedContent: true
   })
   await rendition.value.display()
-
-  title.value = rendition.value
 
   var keyListener = function (e) {
     if ((e.keyCode || e.which) == 37) {
@@ -70,7 +67,7 @@ watch(page, async (value, oldValue) => {
 </script>
 
 <template>
-  <v-container class="bg-white" fluid>
+  <v-container class="bg-grey h-screen" fluid>
     <v-system-bar dense window>
       <v-spacer></v-spacer>
       <v-dialog width="700">
@@ -102,24 +99,19 @@ watch(page, async (value, oldValue) => {
       <v-btn @click="toggleFullscreen" size="x-small" icon="mdi-fullscreen" variant="text"></v-btn>
     </v-system-bar>
     <v-row>
-      <v-col cols="12" class="text-center">
-        <strong>{{ title }}</strong>
-      </v-col>
-    </v-row>
-    <v-row>
       <v-col class="d-flex">
         <div
           @click="page--"
           class="navigation-btn h-100 cursor-pointer d-flex flex-column align-center"
         >
-          <v-icon class="my-auto" color="grey" icon="mdi-chevron-left" size="x-large"></v-icon>
+          <v-icon class="my-auto" color="white" icon="mdi-chevron-left" size="x-large"></v-icon>
         </div>
         <div id="reader"></div>
         <div
           @click="page++"
           class="navigation-btn h-100 cursor-pointer d-flex flex-column align-center"
         >
-          <v-icon class="my-auto" color="grey" icon="mdi-chevron-right" size="x-large"></v-icon>
+          <v-icon class="my-auto" color="white" icon="mdi-chevron-right" size="x-large"></v-icon>
         </div>
       </v-col>
     </v-row>
