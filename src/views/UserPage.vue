@@ -422,7 +422,22 @@ getBookStates()
           label="Инвентарь"
           return-object
           variant="outlined"
-        ></v-autocomplete>
+        >
+          <template v-slot:item="{ item, props }">
+            <v-list-item v-bind="props">
+              <template v-slot:title>
+                {{ item.raw.inventory }}
+              </template>
+              <template v-slot:append>
+                <v-icon
+                  :color="item.raw.status === 0 ? 'red' : 'green'"
+                  icon="mdi-circle"
+                  size="small"
+                ></v-icon>
+              </template>
+            </v-list-item>
+          </template>
+        </v-autocomplete>
       </v-list-item>
       <v-list-item v-if="inventoryMode === 2">
         <v-autocomplete
