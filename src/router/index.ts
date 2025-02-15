@@ -32,6 +32,7 @@ import QuotesView from '@/views/QuotesView.vue'
 import OnlineLibrary from '@/views/OnlineLibrary.vue'
 import ReportsView from '@/views/ReportsView.vue'
 import FundAddViewVue from '@/views/FundAddView.vue'
+import MDataAdminAddView from '@/views/MDataAdminAddView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -65,6 +66,12 @@ const router = createRouter({
       name: 'm-data-edit',
       component: MDataEditView,
       meta: { requiresAuth: true }
+    },
+    {
+      path: '/m-data/admin-add',
+      name: 'm-data-admin-add',
+      component: MDataAdminAddView,
+      meta: { requiresAuth: true, requiresAdmin: true }
     },
     {
       path: '/fund',

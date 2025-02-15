@@ -682,6 +682,10 @@ const addToFund = (item: Book) => {
   router.push('/fund/add')
 }
 
+function addAdminBook() {
+  router.push('/m-data/admin-add')
+}
+
 getBooks()
 getAdmissions()
 getContractors()
@@ -1043,6 +1047,7 @@ watch(page, (newValue) => {
                 <v-col class="d-flex justify-space-around">
                   <v-btn color="primary" variant="flat" @click="getBooks">{{ t('search') }}</v-btn>
                   <v-btn variant="tonal" @click="resetFilters">{{ t('reset') }}</v-btn>
+                  <v-btn v-if="(auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1))" color="primary" variant="flat" @click="addAdminBook">+</v-btn>
                 </v-col>
               </v-row>
               <v-row class="mb-2">
@@ -1801,11 +1806,7 @@ watch(page, (newValue) => {
                           <v-list>
                             <v-dialog width="800">
                               <template v-slot:activator="{ props }">
-                                <v-list-item
-                                  v-bind="props"
-                                  class="cursor-pointer"
-                                  hover
-                                >
+                                <v-list-item v-bind="props" class="cursor-pointer" hover>
                                   <v-list-item-title
                                     >Добавить без редактирования записи</v-list-item-title
                                   >
