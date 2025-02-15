@@ -105,14 +105,27 @@ const documentHidden = computed(() => {
 
 const subscription = ref([])
 
+const page = ref(1)
+const itemsPerPage = ref(10)
+const totalItems = ref(0)
+
 async function getSubscription() {
   try {
-    const response = await api.fetchData(`/v1/subscription/user/${route.params.id}`)
-    if (response.data) subscription.value = response.data.data.items
+    const response = await api.fetchData(
+      `/v1/subscription/user/${route.params.id}?page=${page.value}&per_page=${itemsPerPage.value}`
+    )
+    if (response.data) {
+      subscription.value = response.data.data.items
+      totalItems.value = response.data.data.total
+    }
   } catch (e) {
     console.error('Error:', e)
   }
 }
+
+watch(page, () => {
+  getSubscription()
+})
 
 const sendUpdate = async () => {
   if (userInfo.value) {
@@ -963,7 +976,14 @@ getBookStates()
 
     <v-row>
       <v-col cols="12">
-        <v-data-table :headers="headers" :items="subscription">
+        <v-data-table
+          :headers="headers"
+          :items="subscription"
+          :items-per-page="itemsPerPage"
+          :page="page"
+          :items-length="totalItems"
+          @update:page="page = $event"
+        >
           <template v-slot:[`item.name`]="{ item }">
             <div class="mt-2">{{ item.book.title }}</div>
             <div class="text-medium-emphasis mt-2">
@@ -1059,7 +1079,15 @@ getBookStates()
               <img :src="returned" alt="returned" class="mx-auto" width="60" />
             </div>
           </template>
-          <template v-slot:bottom></template>
+          <template v-slot:bottom>
+            <div class="d-flex align-center justify-end pt-4">
+              <v-pagination
+                v-model="page"
+                :length="Math.ceil(totalItems / itemsPerPage)"
+                rounded="circle"
+              ></v-pagination>
+            </div>
+          </template>
         </v-data-table>
       </v-col>
     </v-row>

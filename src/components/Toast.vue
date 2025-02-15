@@ -8,9 +8,9 @@ const { toasts } = storeToRefs(store)
 const getColor = (type: string) => {
   switch (type) {
     case 'success':
-      return 'primary'
+      return 'green'
     case 'error':
-      return 'error'
+      return 'red'
     case 'info':
       return 'info'
     default:

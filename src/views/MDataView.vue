@@ -811,7 +811,7 @@ watch(page, (newValue) => {
                 <v-col cols="4">
                   <v-img :src="nocover" class="rounded" fluid></v-img>
                   <div class="mt-2">
-                    Create: КГУ"Школа-гимназия имени Бауыржана Момышұлы", Калтай Исабекова
+                    Создатель: {{ selectedItem?.book_log?.[0]?.school?.name || 'Нет данных' }}
                   </div>
                 </v-col>
                 <v-col cols="8">
@@ -1047,7 +1047,13 @@ watch(page, (newValue) => {
                 <v-col class="d-flex justify-space-around">
                   <v-btn color="primary" variant="flat" @click="getBooks">{{ t('search') }}</v-btn>
                   <v-btn variant="tonal" @click="resetFilters">{{ t('reset') }}</v-btn>
-                  <v-btn v-if="(auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1))" color="primary" variant="flat" @click="addAdminBook">+</v-btn>
+                  <v-btn
+                    v-if="auth.user.value && auth.user.value.roles.some((obj) => obj.id === 1)"
+                    color="primary"
+                    variant="flat"
+                    @click="addAdminBook"
+                    >+</v-btn
+                  >
                 </v-col>
               </v-row>
               <v-row class="mb-2">
