@@ -11,6 +11,7 @@
   "quick_search_by_name": "Быстрый поиск по ФИО",
   "books_by_country": "Книги по странам",
   "details": "Подробнее",
+  "select_file": "Выбрать файл",
   "readers_by_age": "Читатели по возрасту",
   "classes_by_number_of_readers": "Классы по количеству читателей",
   "classes": "Классы",
