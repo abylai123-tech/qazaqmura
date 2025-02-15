@@ -150,7 +150,8 @@ const page: Ref<number> = ref(1)
 const length: Ref<number> = ref(1)
 const items: Ref<User[]> = ref([])
 const drawer: Ref<boolean> = ref(false)
-const importFile: Ref<File[] | undefined> = ref(undefined)
+const importFile: Ref<File | null> = ref(null)
+const fileInput: Ref<HTMLInputElement | null> = ref(null)
 const createDrawer: Ref<boolean> = ref(false)
 const addContactPerson: Ref<boolean> = ref(false)
 const specialties = ref([])
@@ -226,15 +227,27 @@ async function getUsers() {
 
 const snackbar = ref(false)
 
+const handleFileUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleFileChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  if (target.files) {
+    importFile.value = target.files[0]
+  }
+}
+
 async function sendFile() {
   try {
     if (importFile.value) {
       const formData = new FormData()
-      formData.append('file', importFile.value[0])
+      formData.append('file', importFile.value)
       const response = await api.postData('/v2/user/excel', formData)
       if (response.data && response.data.success) {
         snackbar.value = true
         drawer.value = false
+        await getUsers()
       }
     }
   } catch (error: any) {
@@ -561,6 +574,9 @@ watch(childRegion, async (value) => {
 getSchools()
 getRegions()
 getOrganizations()
+
+// Add this computed property
+const fileName = computed(() => importFile.value?.name || '')
 </script>
 
 <template>
@@ -581,13 +597,30 @@ getOrganizations()
         >
       </v-list-item>
       <v-list-item>
-        <v-file-input v-model="importFile" label="Файл" show-size></v-file-input>
-        <small class="font-weight-bold">Перетащите файл сюда или нажмите, чтобы загрузить</small
-        ><br />
-        <small>Максимальный размер файла: 300 MB</small>
+        <div class="d-flex flex-column">
+          <div v-if="fileName" class="text-body-1 mb-2">{{ fileName }}</div>
+          <input
+            ref="fileInput"
+            accept=".xlsx, .xls"
+            style="display: none"
+            type="file"
+            @input="handleFileChange"
+          />
+          <div class="d-flex align-center">
+            <v-btn color="primary" variant="outlined" class="mr-2" @click="handleFileUpload">
+              {{ t('select_file') }}
+            </v-btn>
+            <small>Максимальный размер файла: 300 MB</small>
+          </div>
+          <small class="font-weight-bold mt-2"
+            >Перетащите файл сюда или нажмите, чтобы загрузить</small
+          >
+        </div>
       </v-list-item>
       <v-list-item class="mt-2 text-center">
-        <v-btn color="primary" variant="flat" @click="sendFile">{{ t('send') }}</v-btn>
+        <v-btn color="primary" variant="flat" :disabled="!importFile" @click="sendFile">
+          {{ t('send') }}
+        </v-btn>
       </v-list-item>
     </v-navigation-drawer>
 
@@ -1020,30 +1053,6 @@ getOrganizations()
       class="mt-2"
       show-select
     >
-      <!--      <template v-slot:top>-->
-      <!--        <div class="d-flex my-3 mx-4">-->
-      <!--          <v-text-field-->
-      <!--            class="rounded-xl"-->
-      <!--            density="compact"-->
-      <!--            flat-->
-      <!--            hide-details-->
-      <!--            label="Поиск по ИИН / ФИО"-->
-      <!--            prepend-inner-icon="mdi-magnify"-->
-      <!--            single-line-->
-      <!--            variant="outlined"-->
-      <!--          ></v-text-field>-->
-      <!--          <v-spacer></v-spacer>-->
-      <!--          <v-select-->
-      <!--            :items="['Показывать по 10']"-->
-      <!--            density="compact"-->
-      <!--            flat-->
-      <!--            hide-details-->
-      <!--            single-line-->
-      <!--            value="Показывать по 10"-->
-      <!--          ></v-select>-->
-      <!--        </div>-->
-      <!--      </template>-->
-
       <template v-slot:[`item.name`]="{ item }">
         <div class="d-flex flex-column my-2">
           <div>

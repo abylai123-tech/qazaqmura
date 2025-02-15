@@ -1,5 +1,6 @@
 import { onMounted, type Ref, ref } from 'vue'
 import { useAPI } from '@/api'
+import { useRouter } from 'vue-router'
 
 interface User {
   id: number
@@ -34,7 +35,7 @@ interface Data {
       address: string
       zip_code: string
     }
-    organization: null | { id: number, title: string }
+    organization: null | { id: number; title: string }
   }
   avatar: null
   user_data: {
@@ -83,6 +84,8 @@ function checkExpiration() {
 const api = useAPI()
 
 export function useAuth() {
+  const router = useRouter()
+
   onMounted(() => {
     const storedToken = localStorage.getItem('token')
     const storedUser = localStorage.getItem('user')
@@ -143,6 +146,8 @@ export function useAuth() {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     localStorage.removeItem('userData')
+
+    router.push('/login')
   }
 
   return { user, token, userData, login, logout }
