@@ -79,6 +79,8 @@ const filters: Ref<Filter> = ref({
   role_id: null
 })
 
+const requiredRules = [(v: string) => !!v || 'Обязательное поле']
+
 const requestBody: Ref<RequestBody> = ref({
   birthday: '',
   document_ID: '',
@@ -102,6 +104,8 @@ const requestBody: Ref<RequestBody> = ref({
   },
   region_id: 0
 })
+
+const showExtendedData = ref(false)
 
 const phoneNumberRules = computed(() => {
   return [
@@ -346,23 +350,65 @@ function formatDate(dateToFormat: string) {
 
 const createUser = async () => {
   try {
-    const birthday = formatDate(requestBody.value.birthday)
-    const request = {
-      firstname: requestBody.value.firstname,
-      lastname: requestBody.value.lastname,
-      fathername: requestBody.value.fathername,
-      role_id: requestBody.value.role.id,
-      birthday: birthday,
-      sex: requestBody.value.sex
+    // Validate required fields
+    if (!requestBody.value.firstname || !requestBody.value.lastname || !requestBody.value.role) {
+      toast.error('Заполните обязательные поля')
+      return
     }
-    if (requestBody.value.email.length > 0) request.email = requestBody.value.email
-    if (requestBody.value.phone.length > 0) request.phone = requestBody.value.phone
-    if (requestBody.value.document_ID.length > 0)
-      request.document_ID = requestBody.value.document_ID
 
-    if (addContactPerson.value) request.relation = requestBody.value.relation
-    if (regionId.value) request['region_id'] = regionId.value
-    if (organization.value) request['school_id'] = organization.value.id
+    // Validate structure fields for student role
+    if (requestBody.value.role.id === 5) {
+      if (!classroom.value.number || !classroom.value.letter) {
+        toast.error('Для школьника необходимо указать класс')
+        return
+      }
+    }
+
+    // Start with required fields
+    const request: Record<string, any> = {
+      firstname: requestBody.value.firstname.trim(),
+      lastname: requestBody.value.lastname.trim(),
+      role_id: requestBody.value.role.id
+    }
+
+    // Add optional fields only if they have values
+    const optionalFields = {
+      fathername: requestBody.value.fathername?.trim(),
+      birthday: requestBody.value.birthday ? formatDate(requestBody.value.birthday) : null,
+      sex: requestBody.value.sex || null,
+      email: requestBody.value.email?.trim(),
+      phone: requestBody.value.phone?.trim(),
+      document_ID: requestBody.value.document_ID?.trim()
+    }
+
+    // Add only filled optional fields to request
+    Object.entries(optionalFields).forEach(([key, value]) => {
+      if (value) {
+        request[key] = value
+      }
+    })
+
+    // Add contact person if enabled and fields are filled
+    if (addContactPerson.value && requestBody.value.relation) {
+      const relation = requestBody.value.relation
+      if (relation.firstname?.trim() || relation.lastname?.trim() || 
+          relation.phone?.trim() || relation.user_relative_id) {
+        request.relation = {
+          ...(relation.firstname?.trim() && { firstname: relation.firstname.trim() }),
+          ...(relation.lastname?.trim() && { lastname: relation.lastname.trim() }),
+          ...(relation.phone?.trim() && { phone: relation.phone.trim() }),
+          ...(relation.user_relative_id && { user_relative_id: relation.user_relative_id })
+        }
+      }
+    }
+
+    // Add region and organization if they exist
+    if (regionId.value) {
+      request.region_id = regionId.value
+    }
+    if (organization.value?.id) {
+      request.school_id = organization.value.id
+    }
 
     const response = await api.postData('/v1/user', request)
     if (response.data && addStructure.value && !isCollege.value) {
@@ -374,6 +420,7 @@ const createUser = async () => {
       createDrawer.value = false
       await getUsers()
 
+      // Reset form
       requestBody.value = {
         birthday: '',
         document_ID: '',
@@ -577,6 +624,13 @@ getOrganizations()
 
 // Add this computed property
 const fileName = computed(() => importFile.value?.name || '')
+
+// Add watch for role changes
+watch(() => requestBody.value.role, (newRole) => {
+  if (newRole?.id === 5) { // If role is student
+    addStructure.value = true // Automatically enable structure
+  }
+})
 </script>
 
 <template>
@@ -636,18 +690,15 @@ const fileName = computed(() => importFile.value?.name || '')
       <v-list-item>
         <v-form class="mt-4">
           <v-text-field
-            v-model="requestBody.document_ID"
-            :label="t('iin')"
-            variant="outlined"
-          ></v-text-field>
-          <v-text-field
             v-model="requestBody.lastname"
-            label="Фамилия"
+            label="Фамилия *"
+            :rules="requiredRules"
             variant="outlined"
           ></v-text-field>
           <v-text-field
             v-model="requestBody.firstname"
-            label="Имя"
+            label="Имя *"
+            :rules="requiredRules"
             variant="outlined"
           ></v-text-field>
           <v-text-field
@@ -660,7 +711,8 @@ const fileName = computed(() => importFile.value?.name || '')
             :items="roles"
             item-title="label"
             item-value="id"
-            :label="t('role')"
+            label="Роль *"
+            :rules="requiredRules"
             return-object
             variant="outlined"
           ></v-autocomplete>
@@ -746,39 +798,53 @@ const fileName = computed(() => importFile.value?.name || '')
       </v-list-item>
 
       <v-list-item>
-        <v-btn
-          append-icon="mdi-plus"
-          color="primary"
-          :text="t('extended_data')"
-          variant="text"
-        ></v-btn>
+        <v-expansion-panels>
+          <v-expansion-panel>
+            <v-expansion-panel-title>
+              {{ t('extended_data') }}
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <v-text-field
+                v-model="requestBody.document_ID"
+                :label="t('iin')"
+                variant="outlined"
+              ></v-text-field>
+              
+              <div class="d-flex mt-4 align-center">
+                <v-text-field
+                  v-model="requestBody.birthday"
+                  :label="t('date_of_birth')"
+                  type="date"
+                  variant="outlined"
+                ></v-text-field>
+                <v-radio-group v-model="requestBody.sex" class="ml-4" color="primary" inline>
+                  <v-radio :value="1" :label="t('male')"></v-radio>
+                  <v-radio :value="2" :label="t('female')"></v-radio>
+                </v-radio-group>
+              </div>
+              
+              <div class="d-flex mt-4 align-center">
+                <v-text-field 
+                  v-model="requestBody.email" 
+                  label="Email" 
+                  variant="outlined"
+                ></v-text-field>
+                <v-text-field
+                  v-model="requestBody.phone"
+                  :rules="phoneNumberRules"
+                  class="ml-4"
+                  :label="t('phone_number')"
+                  maxlength="16"
+                  variant="outlined"
+                  @input="formatPhoneNumber"
+                ></v-text-field>
+              </div>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
       </v-list-item>
 
       <v-list-item>
-        <div class="d-flex mt-4 align-center">
-          <v-text-field
-            v-model="requestBody.birthday"
-            :label="t('date_of_birth')"
-            type="date"
-            variant="outlined"
-          ></v-text-field>
-          <v-radio-group v-model="requestBody.sex" class="ml-4" color="primary" inline>
-            <v-radio :value="1" :label="t('male')"></v-radio>
-            <v-radio :value="2" :label="t('female')"></v-radio>
-          </v-radio-group>
-        </div>
-        <div class="d-flex mt-4 align-center">
-          <v-text-field v-model="requestBody.email" label="Email" variant="outlined"></v-text-field>
-          <v-text-field
-            v-model="requestBody.phone"
-            :rules="phoneNumberRules"
-            class="ml-4"
-            :label="t('phone_number')"
-            maxlength="16"
-            variant="outlined"
-            @input="formatPhoneNumber"
-          ></v-text-field>
-        </div>
         <v-switch
           v-model="addContactPerson"
           class="ml-2"
@@ -790,6 +856,12 @@ const fileName = computed(() => importFile.value?.name || '')
           class="ml-2"
           color="primary"
           :label="t('structure')"
+          :disabled="requestBody.role?.id === 5"
+          @update:model-value="(val) => {
+            if (requestBody.role?.id === 5) {
+              addStructure = true
+            }
+          }"
         ></v-switch>
         <v-switch v-model="isCollege" class="ml-2" color="primary" label="Колледж"></v-switch>
       </v-list-item>
@@ -833,6 +905,7 @@ const fileName = computed(() => importFile.value?.name || '')
             :items="numbers"
             class="mt-2"
             clearable
+            :rules="requestBody.role?.id === 5 ? requiredRules : undefined"
             label="Цифра класса"
             variant="outlined"
           ></v-select>
@@ -841,6 +914,7 @@ const fileName = computed(() => importFile.value?.name || '')
             :items="letters"
             class="ml-4 mt-2"
             clearable
+            :rules="requestBody.role?.id === 5 ? requiredRules : undefined"
             label="Буква класса"
             variant="outlined"
           ></v-select>
