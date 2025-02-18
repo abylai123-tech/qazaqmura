@@ -224,7 +224,7 @@ function logoutUser() {
 function downloadPDF() {
   const link = document.createElement('a')
   link.href = qrcode
-  link.download = 'document.pdf'
+  link.download = 'qrcode.pdf'
   link.click()
   document.body.removeChild(link)
 }
