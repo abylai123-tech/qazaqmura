@@ -162,8 +162,19 @@ async function sendBookData() {
   }
 
   try {
-    const response = await api.postData('/v1/book', form.value)
-    const bookId = response.data.id
+    const payload = {
+      title: form.value.title,
+      author_id_main: form.value.author_id_main,
+      ...(form.value.author_id.length > 0 && { author_id: form.value.author_id }),
+      ...(form.value.language_id.length > 0 && { language_id: form.value.language_id }),
+      ...(form.value.materials.length > 0 && { materials: form.value.materials }),
+      ...(form.value.type_id && { type_id: form.value.type_id }),
+      ...(form.value.year && { year: form.value.year }),
+      ...(form.value.link?.URL && form.value.link?.title && { link: form.value.link })
+    }
+
+    const response = await api.postData('/v1/book', payload)
+    const bookId = (response.data as { id: number }).id
 
     if (cover.value?.files?.[0]) {
       const coverFormData = new FormData()
