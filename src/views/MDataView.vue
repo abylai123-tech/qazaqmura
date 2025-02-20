@@ -1269,7 +1269,7 @@ watch(page, (newValue) => {
                     <v-chip v-if="item.book_epub" class="ml-2" color="success" variant="flat"
                       >EPUB
                     </v-chip>
-                    <v-btn
+                    <!-- <v-btn
                       v-if="item.book_epub && auth.user.value?.roles.some((obj) => obj.id === 1)"
                       class="ml-2"
                       color="warning"
@@ -1277,7 +1277,7 @@ watch(page, (newValue) => {
                       variant="flat"
                       @click="downloadEPUB(item.book_epub)"
                       >{{ t('download_pdf') }}
-                    </v-btn>
+                    </v-btn> -->
                   </v-col>
                 </v-row>
 

@@ -109,7 +109,6 @@ const showExtendedData = ref(false)
 
 const phoneNumberRules = computed(() => {
   return [
-    (v) => !!v || 'Обязательное поле',
     (v) => /^\+\d\(\d{3}\)\d{3}-\d{2}-\d{2}$/.test(v) || 'Неправильный формат телефона'
   ]
 })
@@ -831,7 +830,6 @@ watch(() => requestBody.value.role, (newRole) => {
                 ></v-text-field>
                 <v-text-field
                   v-model="requestBody.phone"
-                  :rules="phoneNumberRules"
                   class="ml-4"
                   :label="t('phone_number')"
                   maxlength="16"
@@ -1063,7 +1061,7 @@ watch(() => requestBody.value.role, (newRole) => {
         <v-btn class="mr-3" variant="tonal" @click="structureDrawer = true">{{
           t('structure')
         }}</v-btn>
-        <v-menu>
+        <!-- <v-menu>
           <template v-slot:activator="{ props }">
             <v-btn append-icon="mdi-chevron-down" class="mr-3" v-bind="props" variant="tonal"
               >{{ t('download_pdf') }}
@@ -1076,7 +1074,7 @@ watch(() => requestBody.value.role, (newRole) => {
             <v-list-item :value="3" @click="downloadList(5)">{{ t('students') }}</v-list-item>
             <v-list-item :value="4" @click="downloadList(6)">{{ t('school_staff') }}</v-list-item>
           </v-list>
-        </v-menu>
+        </v-menu> -->
         <v-menu>
           <template v-slot:activator="{ props }">
             <v-btn

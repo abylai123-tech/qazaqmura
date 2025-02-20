@@ -2063,7 +2063,7 @@ getInventory()
                 :items="schools"
               >
                 <template v-slot:[`item.report`]="{ item }">
-                  <v-btn
+                  <!-- <v-btn
                     class="rounded"
                     color="primary"
                     prepend-icon="mdi-download"
@@ -2071,7 +2071,7 @@ getInventory()
                     @click="downloadMinistryReport(item)"
                   >
                     {{ t('download_pdf') }}
-                  </v-btn>
+                  </v-btn> -->
                 </template>
                 <template v-slot:[`item.actions`]="{ item }">
                   <v-dialog max-width="90vw">

@@ -437,14 +437,14 @@ watch(sort, () => {
 
         <v-menu>
           <template v-slot:activator="{ props }">
-            <v-btn
+            <!-- <v-btn
               class="mr-3"
               color="primary"
               prepend-icon="mdi-chevron-down"
               v-bind="props"
               variant="flat"
               >{{ t('download_pdf') }}
-            </v-btn>
+            </v-btn> -->
           </template>
 
           <v-list>
