@@ -384,7 +384,7 @@ watch(page, (newValue) => {
 
       <template v-slot:append>
         <!-- <v-btn class="mr-3" color="primary" variant="flat">{{t('document_generation')}}</v-btn> -->
-        <v-menu>
+        <!-- <v-menu>
           <template v-slot:activator="{ props }">
             <v-btn
               append-icon="mdi-chevron-down"
@@ -411,7 +411,7 @@ watch(page, (newValue) => {
               >Список учебников
             </v-list-item>
           </v-list>
-        </v-menu>
+        </v-menu> -->
         <HelpButton video-id="8vUsW7Fs5M8" />
       </template>
     </v-app-bar>

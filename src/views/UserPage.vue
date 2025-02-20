@@ -68,6 +68,7 @@ const headers = [
   { key: 'id', title: 'ID' },
   { key: 'name', title: t('book') },
   { key: 'activity', title: t('activity') },
+  { key: 'logs', title: 'История' },
   { key: 'actions', title: t('actions') }
 ]
 
@@ -387,6 +388,18 @@ const downloadCard = async () => {
       document.body.removeChild(link)
     }
   }
+}
+
+function formatDateTime(dateString: string) {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return new Intl.DateTimeFormat('ru-RU', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  }).format(date)
 }
 
 const inventoryMode = ref(1)
@@ -984,18 +997,38 @@ getBookStates()
           :items-length="totalItems"
           @update:page="page = $event"
         >
+          <template v-slot:[`item.logs`]="{ item }">
+            <div v-if="item.logs && item.logs.length > 0">
+              <div v-for="log in item.logs" :key="log.id" class="mb-2">
+                <v-chip
+                  :color="log.type === 1 ? 'primary' : 'success'"
+                  variant="outlined"
+                  size="small"
+                  class="mb-1"
+                >
+                  {{ log.type === 1 ? 'Выдал' : 'Принял' }}
+                </v-chip>
+                <div class="text-caption">{{ log.fullname }}</div>
+              </div>
+            </div>
+          </template>
+
           <template v-slot:[`item.name`]="{ item }">
             <div class="mt-2">{{ item.book.title }}</div>
             <div class="text-medium-emphasis mt-2">
               {{ t('year_of_publication') }}: {{ item.book.year }}
             </div>
+            <div class="text-medium-emphasis">
+              Инвентарный номер: {{ item.book_inventory?.inventory }}
+            </div>
             <div class="my-2">
               <v-chip
                 v-for="author in item.book.book_author_main"
-                :ley="author.id"
+                :key="author.id"
                 color="primary"
                 variant="outlined"
-                >{{ author.name }}
+              >
+                {{ author.name }}
               </v-chip>
             </div>
             <div class="my-2">
@@ -1009,22 +1042,26 @@ getBookStates()
               </v-chip>
             </div>
           </template>
+
           <template v-slot:[`item.activity`]="{ item }">
             <div class="mb-2">
-              <v-chip v-if="item.status === 'return'" color="primary" variant="outlined"
-                >{{ t('returned') }}
+              <v-chip v-if="item.status === 'return'" color="primary" variant="outlined">
+                {{ t('returned') }}
               </v-chip>
               <v-chip v-if="item.status === 'request'" color="primary" variant="outlined">
                 На выдаче
               </v-chip>
-              <v-chip color="primary" variant="outlined" v-if="item.status === 'reader'"
-                >Читательский зал</v-chip
-              >
+              <v-chip color="primary" variant="outlined" v-if="item.status === 'reader'">
+                Читательский зал
+              </v-chip>
             </div>
-            <div>{{ t('issue_date') }}: {{ item.created_at }}</div>
-            <div>{{ t('return_date') }}: {{ item.return_date }}</div>
-            <div v-if="item.status == 'return'">Дата возврата в фонд: {{ item.returned_at }}</div>
+            <div>{{ t('issue_date') }}: {{ formatDateTime(item.created_at) }}</div>
+            <div>{{ t('return_date') }}: {{ formatDateTime(item.return_date) }}</div>
+            <div v-if="item.status == 'return'">
+              Дата возврата в фонд: {{ formatDateTime(item.returned_at) }}
+            </div>
           </template>
+
           <template v-slot:[`item.actions`]="{ item }">
             <div v-if="item.status !== 'return'" class="d-flex flex-column my-2">
               <v-btn color="#384352" variant="flat" @click="activateReturn(item.id)"

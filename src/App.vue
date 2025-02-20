@@ -183,6 +183,16 @@ const navigationDrawerItems = computed(() => {
     return classroomNavigation.value
   } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 7)) {
     return publisherNavigation.value
+  } else if (auth.user.value && auth.user.value.roles.some((obj) => obj.id === 5)) {
+    return [{
+      title: 'Онлайн библиотека',
+      value: 11,
+      props: {
+        prependIcon: 'mdi-library',
+        appendIcon: 'mdi-chevron-right',
+        to: { name: 'online-library' }
+      }
+    }]
   }
   return []
 })
@@ -211,6 +221,8 @@ const navigationActive = computed(() => {
       return 20
     case 'reports':
       return 10
+    case 'online-library':
+      return 11
     default:
       return 0
   }
