@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useAPI } from '@/api'
-import { computed, type Ref, ref, watch } from 'vue'
+import { computed, type Ref, ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import HelpButton from '@/components/HelpButton.vue'
 import returned from '@/assets/return.svg'
@@ -334,14 +334,29 @@ const getBookStates = async () => {
   }
 }
 
-const getInventory = async () => {
+const inventoryPage = ref(1)
+const inventorySearch = ref('')
+const isLoadingMore = ref(false)
+const hasMoreItems = ref(true)
+
+const getInventory = async (search?: string | null) => {
   try {
-    const response = await api.fetchData('/v1/book/school?book_inventory=1')
-    if (response.data) {
+    isLoadingMore.value = true
+    const params = new URLSearchParams()
+    params.append('book_inventory', '1')
+    
+    if (search) {
+      params.append('title', search)
+    }
+
+    const response = await api.fetchData(`/v1/book/school?${params.toString()}`)
+    if (response.data?.data?.items) {
       inventory.value = response.data.data.items
     }
   } catch (e) {
     console.error('Error:', e)
+  } finally {
+    isLoadingMore.value = false
   }
 }
 
@@ -412,6 +427,20 @@ getSubscription()
 getResult()
 getInventory()
 getBookStates()
+
+watch(inventorySearch, (newVal) => {
+  getInventory(newVal)
+})
+
+onMounted(() => {
+  document.addEventListener('click', (e) => {
+    const searchResults = document.querySelector('.search-results')
+    const searchInput = document.querySelector('.v-text-field')
+    if (!searchResults?.contains(e.target) && !searchInput?.contains(e.target)) {
+      showResults.value = false
+    }
+  })
+})
 </script>
 
 <template>
@@ -431,12 +460,35 @@ getBookStates()
         <v-autocomplete
           v-model="selectedInventory"
           :items="inventory"
-          class="mt-4"
-          item-title="book.title"
+          :loading="isLoadingMore"
           :label="t('book')"
+          item-title="book.title"
           return-object
           variant="outlined"
-        ></v-autocomplete>
+          @update:search="getInventory"
+        >
+          <template v-slot:item="{ props, item }">
+            <v-list-item v-bind="props" class="custom-list-item">
+              <template v-slot:title>
+                {{ item.raw.book?.title }}
+              </template>
+              <template v-slot:subtitle>
+                <div class="custom-subtitle">
+                  <div class="d-flex align-center gap-2">
+                    <span>{{ item.raw.book?.year }}</span>
+                    <span v-if="item.raw.book?.book_author_main?.length">
+                      - {{ item.raw.book?.book_author_main?.map(a => a.name).join(', ') }}
+                    </span>
+                    <v-divider vertical class="mx-2"></v-divider>
+                    <span>{{ item.raw.price }}₸</span>
+                    <v-divider vertical class="mx-2"></v-divider>
+                    <span>{{ item.raw.amount }} шт.</span>
+                  </div>
+                </div>
+              </template>
+            </v-list-item>
+          </template>
+        </v-autocomplete>
       </v-list-item>
       <v-list-item v-if="inventoryMode === 1">
         <v-autocomplete
@@ -1130,3 +1182,43 @@ getBookStates()
     </v-row>
   </v-container>
 </template>
+
+<style scoped>
+.position-relative {
+  position: relative;
+}
+
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+}
+
+.custom-list-item {
+  white-space: normal;
+  padding: 12px 16px;
+}
+
+.custom-subtitle {
+  white-space: normal;
+  overflow: visible;
+}
+
+.gap-2 {
+  gap: 8px;
+}
+
+:deep(.v-list-item-subtitle) {
+  white-space: normal !important;
+  overflow: visible !important;
+}
+
+:deep(.v-list-item__content) {
+  overflow: visible !important;
+}
+</style>
