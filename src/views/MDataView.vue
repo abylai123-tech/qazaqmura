@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useAPI } from '@/api'
-import { ref, type Ref, watch } from 'vue'
+import { ref, type Ref, watch, computed } from 'vue'
 import nocover from '@/assets/no-book-cover.svg'
 import HelpButton from '@/components/HelpButton.vue'
 import { useAuth } from '@/auth'
@@ -686,6 +686,10 @@ function addAdminBook() {
   router.push('/m-data/admin-add')
 }
 
+const filteredItems = computed(() => {
+  return items.value?.filter(item => !item.book_epub) || []
+})
+
 getBooks()
 getAdmissions()
 getContractors()
@@ -1237,7 +1241,7 @@ watch(page, (newValue) => {
       </v-col>
     </v-row>
 
-    <v-row v-for="item in items" :key="item.id" class="mx-2 my-3">
+    <v-row v-for="item in filteredItems" :key="item.id" class="mx-2 my-3">
       <v-card class="w-100">
         <v-card-text>
           <v-container fluid>

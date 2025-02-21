@@ -792,6 +792,23 @@ initializeFromStore()
 onUnmounted(() => {
   bookStore.clearBookData()
 })
+
+const handleNewTag = async (event: KeyboardEvent) => {
+  const target = event.target as HTMLInputElement
+  const value = target.value.trim()
+  if (value) {
+    try {
+      const response = await api.postData('/v1/tag', { label: value })
+      if (response.data) {
+        tags.value.push(response.data)
+        form.value.tags = [...(form.value.tags || []), response.data.id]
+      }
+    } catch (error) {
+      console.error('Error creating tag:', error)
+    }
+    target.value = ''
+  }
+}
 </script>
 
 <template>
@@ -1188,6 +1205,7 @@ onUnmounted(() => {
               <v-row>
                 <v-col>
                   <v-autocomplete
+                    v-model="form.tags"
                     :items="tags"
                     chips
                     item-title="label"
@@ -1195,17 +1213,13 @@ onUnmounted(() => {
                     label="Ключевые слова"
                     multiple
                     placeholder="Поиск"
-                    prepend-inner-icon="mdi-magnify"
-                    return-object
                     variant="outlined"
                     @update:search="getTags"
+                    @keydown.enter="handleNewTag"
                   >
                     <template v-slot:no-data>
-                      <div class="px-4 d-flex justify-space-between align-center">
-                        <span>Данного слова нет в списке</span>
-                        <v-btn color="primary" variant="flat" @click="setNewItem('tag')"
-                          >{{ t('add') }}
-                        </v-btn>
+                      <div class="px-4">
+                        <span>Нажмите Enter для добавления</span>
                       </div>
                     </template>
                   </v-autocomplete>
