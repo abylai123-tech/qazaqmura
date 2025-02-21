@@ -483,6 +483,8 @@ onMounted(() => {
                     <span>{{ item.raw.price }}₸</span>
                     <v-divider vertical class="mx-2"></v-divider>
                     <span>{{ item.raw.amount }} шт.</span>
+                    <v-divider vertical class="mx-2"></v-divider>
+                    <span>Дата активации: {{ formatDateTime(item.raw.activated_at) }}</span>
                   </div>
                 </div>
               </template>
@@ -872,7 +874,7 @@ onMounted(() => {
                       >
                         {{ t('download_access_card') }}
                       </v-btn>
-                      <span>03.05.2024</span>
+                      <p>Дата активации: {{ formatDateTime(userInfo?.activated_at) }}</p>
                     </v-col>
                   </v-row>
                   <v-divider class="my-2"></v-divider>

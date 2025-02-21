@@ -967,6 +967,24 @@ const handleCitySelect = async () => {
   await getCities(null, true)
 }
 
+const handleNewTag = async (event: KeyboardEvent) => {
+  const target = event.target as HTMLInputElement
+  const value = target.value.trim()
+  if (value) {
+    try {
+      const response = await api.postData('/v1/tag', { label: value })
+      if (response.data) {
+        tags.value.push(response.data)
+        form.value.tags = [...(form.value.tags || []), response.data.label]
+      }
+      event.target.value = ''
+    } catch (error) {
+      console.error('Error creating tag:', error)
+    }
+    target.value = ''
+  }
+}
+
 getAuthors()
 getPublishers()
 getCities()
@@ -1378,25 +1396,21 @@ getContentTypes()
               <v-row>
                 <v-col>
                   <v-autocomplete
+                    v-model="form.tags"
                     :items="tags"
                     chips
                     item-title="label"
                     item-value="id"
-                    :label="'Ключевые слова *'"
-                    :rules="[rules.required]"
-                    :error="tagsError"
-                    @update:model-value="tagsValid = !!$event"
+                    label="Ключевые слова *"
                     multiple
                     placeholder="Поиск"
                     variant="outlined"
                     @update:search="getTags"
+                    @keydown.enter="handleNewTag"
                   >
                     <template v-slot:no-data>
-                      <div class="px-4 d-flex justify-space-between align-center">
-                        <span>Данного слова нет в списке</span>
-                        <v-btn color="primary" variant="flat" @click="setNewItem('tag')"
-                          >{{ t('add') }}
-                        </v-btn>
+                      <div class="px-4">
+                        <span>Нажмите Enter для добавления</span>
                       </div>
                     </template>
                   </v-autocomplete>

@@ -900,7 +900,7 @@ watch(() => requestBody.value.role, (newRole) => {
         <div v-if="!isCollege" class="d-flex">
           <v-select
             v-model="classroom.number"
-            :items="numbers"
+            :items="[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]"
             class="mt-2"
             clearable
             :rules="requestBody.role?.id === 5 ? requiredRules : undefined"
@@ -909,7 +909,7 @@ watch(() => requestBody.value.role, (newRole) => {
           ></v-select>
           <v-select
             v-model="classroom.letter"
-            :items="letters"
+            :items="['А', 'Ә', 'Б', 'В', 'Г', 'Ғ', 'Д', 'Е', 'Ж', 'З', 'И', 'К', 'Қ', 'Л', 'М', 'Н', 'Ң', 'О', 'Ө', 'П', 'Р', 'С', 'Т', 'У', 'Ұ', 'Ү', 'Ф', 'Х', 'Һ', 'Ц', 'Ч', 'Ш', 'Щ', 'Ы', 'І', 'Э', 'Ю', 'Я']"
             class="ml-4 mt-2"
             clearable
             :rules="requestBody.role?.id === 5 ? requiredRules : undefined"
